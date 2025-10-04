@@ -4,10 +4,6 @@
 .Ruserdata
 .Rproj.user/
 
-# Data files (don't commit large data files)
-data/raw/
-data/processed/
-
 # Output files
 output/
 
