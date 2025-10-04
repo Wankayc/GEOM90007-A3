@@ -1,9 +1,15 @@
 # GEOM90007 Assignment 3
 
 ## Installation & Running
-- Download or clone this repository
 
-- Open RStudio and set your working directory to the project folder
+**Clone the repository**
+git clone https://github.com/Wankayc/GEOM90007-A3.git
+
+**Install Git LFS (if not already installed)**
+git lfs install
+
+**Download the large data files**
+git lfs pull
 
 ---
 
@@ -52,6 +58,10 @@ The app will automatically:
 - functions.R - Reusable utility functions
 
 - Data Files (in data/ folder)
+
+---
+
+## Data
 
 raw/Public Transport Lines.geojson - [Route data](https://opendata.transport.vic.gov.au/dataset/6d36dfd9-8693-4552-8a03-05eb29a391fd/resource/52e5173e-b5d5-4b65-9b98-89f225fc529c/download/public_transport_lines.geojson)
 
