@@ -1,0 +1,22 @@
+# R related
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Data files (don't commit large data files)
+data/raw/
+data/processed/
+
+# Output files
+output/
+
+# API keys and secrets
+*_key.txt
+*_secret.txt
+.env
+.Renviron
+
+# OS files
+.DS_Store
+Thumbs.db
