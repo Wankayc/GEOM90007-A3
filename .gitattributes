@@ -1,15 +1,13 @@
 # GEOM90007 Assignment 3 - Git LFS Configuration
 # This file automatically tracks large files with Git LFS
-
 # SPATIAL DATA FILES
 data/raw/*.geojson filter=lfs diff=lfs merge=lfs -text
 *.geojson filter=lfs diff=lfs merge=lfs -text
 *.gpkg filter=lfs diff=lfs merge=lfs -text
-
 # R DATA FILES  
 *.rds filter=lfs diff=lfs merge=lfs -text
 *.RData filter=lfs diff=lfs merge=lfs -text
-
 # DATA & OUTPUT FILES
 output/**/* filter=lfs diff=lfs merge=lfs -text
 results/**/* filter=lfs diff=lfs merge=lfs -text
+data/raw/** filter=lfs diff=lfs merge=lfs -text
