@@ -10,13 +10,13 @@ library(ggplot2)
 library(sf)
 library(here)
 
-# Load your existing setup and data processing
+# Load existing setup and data processing
 # source(here::here("R", "setup.R"))
 # source(here::here("R", "data_import.R"))
 # source(here::here("R", "data_processing.R"))
 # source(here::here("R", "functions.R"))
 
-# Pre-processed data storage (from your existing code)
+# Pre-processed data storage
 # preprocessed_data <- new.env()
 
 # Melbourne CBD coordinates
