@@ -41,7 +41,7 @@ observe({
   )
 })
 
-# Main map observer - SIMPLIFIED
+# Main map observer
 observe({
   map_proxy <- leafletProxy("transport_map") %>% 
     clearShapes() %>%
@@ -111,7 +111,7 @@ output$map_status <- renderValueBox({
   valueBox("Ready", "Data loading disabled", icon = icon("layer-group"), color = "purple")
 })
 
-# Dynamic value boxes - SIMPLIFIED
+# Dynamic value boxes
 output$total_stops <- renderValueBox({
   valueBox("8191", "Total Stops", icon = icon("map-marker"), color = "blue")
 })
@@ -128,7 +128,7 @@ output$bus_stops <- renderValueBox({
   valueBox("5874", "Bus Stops", icon = icon("bus"), color = "red")
 })
 
-# Route info using function - SIMPLIFIED
+# Route info using function
 output$route_info <- renderUI({
   HTML("
     <h4>Interactive Transport Explorer</h4>
