@@ -1,25 +1,11 @@
-# Dashboard UI
-ui <- dashboardPage(
-  skin = "blue",
-  
-  # Header
-  dashboardHeader(
-    title = "GEOM90007 Assignment 3",
-    titleWidth = 300
-  ),
-  
-  # Sidebar
-  dashboardSidebar(
-    width = 300,
-    sidebarMenu(
-      id = "tabs",
-      menuItem("Melbourne Map", tabName = "map", icon = icon("map")),
-      menuItem("Transport & Directions", tabName = "directions", icon = icon("route"))
-    ),
-    
-    # Simple controls for Map Tab
-    conditionalPanel(
-      'input.tabs == "map"',
+# Map Tab
+tabPanel(
+  "Map",
+  icon = icon("map"),
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      # Map Controls
       sliderInput(
         "map_zoom",
         "Map Zoom Level:",
@@ -28,14 +14,9 @@ ui <- dashboardPage(
         value = 13,
         step = 1
       ),
-      actionButton("reset_map", "Reset View", icon = icon("globe"))
-    ),
-    
-    # Simplified controls for Directions Tab
-    conditionalPanel(
-      'input.tabs == "directions"',
+      actionButton("reset_map", "Reset View", icon = icon("globe")),
       
-      # Route planning inputs
+      # Route planning
       pickerInput(
         "start_location",
         "Start Location:",
@@ -86,100 +67,55 @@ ui <- dashboardPage(
       
       hr(),
       
-      # FUNCTIONAL LEGEND THAT ACTUALLY WORKS
-      h4("Map Layers", style = "margin-top: 20px;"),
-      
-      # Transport Lines Toggles
-      h5("Transport Lines:", style = "margin-top: 15px; margin-bottom: 10px;"),
+      # Map Layers
+      h4("Map Layers"),
       awesomeCheckboxGroup(
         "transport_lines",
-        label = NULL,
+        label = "Transport Lines:",
         choices = c(
           "Train Lines" = "train_lines",
           "Tram Lines" = "tram_lines", 
           "Bus Lines" = "bus_lines",
           "SkyBus" = "skybus_lines"
         ),
-        selected = character(0),  # CHANGE FROM c("train_lines", "tram_lines", "bus_lines", "skybus_lines") TO character(0)
+        selected = character(0),
         inline = FALSE
       ),
-      
-      # Transport Stops Toggles - CHANGE THIS:
       awesomeCheckboxGroup(
         "transport_stops", 
-        label = NULL,
+        label = "Transport Stops:",
         choices = c(
           "Train Stations" = "train_stops",
           "Tram Stops" = "tram_stops",
           "Bus Stops" = "bus_stops"
         ),
-        selected = character(0),  # CHANGE FROM c("train_stops", "tram_stops", "bus_stops") TO character(0)
+        selected = character(0),
         inline = FALSE
       ),
       
-      # Quick toggle buttons
       div(style = "text-align: center; margin-top: 15px;",
           actionButton("toggle_lines", "Toggle All Lines", class = "btn-xs", style = "margin-right: 5px;"),
           actionButton("toggle_stops", "Toggle All Stops", class = "btn-xs")
-      ),
-      
-      # Error message display
-      uiOutput("data_status_ui")
-    )
-  ),
-  
-  # Main body
-  dashboardBody(
-    useShinyjs(),
-    shinyWidgets::useShinydashboard(),
-    tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
-      tags$style(HTML("
-        /* Better checkbox styling */
-        .checkbox {
-          margin-bottom: 8px;
-        }
-        .checkbox label {
-          font-size: 13px;
-          display: flex;
-          align-items: center;
-        }
-      "))
+      )
     ),
     
-    tabItems(
-      # Simple Map Tab
-      tabItem(
-        tabName = "map",
-        fluidRow(
+    mainPanel(
+      width = 9,
+      fluidRow(
+        column(
+          width = 8,
           box(
             width = 12,
-            title = "Melbourne Map",
-            status = "primary",
-            solidHeader = TRUE,
-            leafletOutput("simple_map", height = "600px")
-          )
-        ),
-        fluidRow(
-          valueBoxOutput("melbourne_info", width = 4),
-          valueBoxOutput("city_center", width = 4),
-          valueBoxOutput("map_status", width = 4)
-        )
-      ),
-      
-      # Comprehensive Transport & Directions Tab
-      tabItem(
-        tabName = "directions",
-        fluidRow(
-          box(
-            width = 8,
             title = "Transport Network & Directions",
             status = "primary",
             solidHeader = TRUE,
             leafletOutput("transport_map", height = "600px")
-          ),
+          )
+        ),
+        column(
+          width = 4,
           box(
-            width = 4,
+            width = 12,
             title = "Route Information",
             status = "info",
             solidHeader = TRUE,
@@ -194,9 +130,6 @@ ui <- dashboardPage(
           )
         )
       )
-    ),
-    
-    # Loading screen
-    uiOutput("loading_screen")
+    )
   )
 )
