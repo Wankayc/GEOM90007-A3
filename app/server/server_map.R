@@ -41,8 +41,11 @@ observe({
   )
 })
 
-# Main map observer
+# Main map observer - ADDED CHECK FOR MAP EXISTENCE
 observe({
+  # Only run if the map exists
+  req(input$transport_map_bounds)
+  
   map_proxy <- leafletProxy("transport_map") %>% 
     clearShapes() %>%
     clearMarkers() %>%
@@ -59,15 +62,16 @@ observe({
   }
   
   # Build active groups and add layer control
-  active_groups <- build_active_groups(input$transport_lines, input$transport_stops)
-  
-  if (length(active_groups) > 0) {
-    map_proxy %>%
-      addLayersControl(
-        overlayGroups = active_groups,
-        options = layersControlOptions(collapsed = FALSE)
-      )
-  }
+  # COMMENTED OUT
+  # active_groups <- build_active_groups(input$transport_lines, input$transport_stops)
+  # 
+  # if (length(active_groups) > 0) {
+  #   map_proxy %>%
+  #     addLayersControl(
+  #       overlayGroups = active_groups,
+  #       options = layersControlOptions(collapsed = FALSE)
+  #     )
+  # }
 })
 
 # Simple Map Tab
@@ -141,3 +145,4 @@ output$route_info <- renderUI({
     </ul>
   ")
 })
+
