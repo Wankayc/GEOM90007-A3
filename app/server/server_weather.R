@@ -40,7 +40,7 @@ summarise_period_box <- function(feed, start_date, end_date) {
 
 #------------------------------------------------------------#
 ## ---- File paths (adjust for your folders) ----
-BOM_DIR   <- "./data/raw/weather_and_air"
+BOM_DIR   <- "../../data/raw/weather_and_air"
 SENSOR_CSV<- "microclimate-sensors-data.csv"
 
 ## ---- BOM loader ----
