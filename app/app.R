@@ -8,4 +8,4 @@ source("ui/ui_main.R")
 source("server/server_main.R")
 
 # Run the application
-shinyApp(ui = ui, server = server)
+shinyApp(ui, server, options=list(launch.browser=TRUE))
