@@ -40,7 +40,7 @@ summarise_period_box <- function(feed, start_date, end_date) {
 
 #------------------------------------------------------------#
 ## ---- File paths (adjust for your folders) ----
-BOM_DIR   <- "../../data/raw/weather_and_air"
+BOM_DIR   <- "../../data/raw/weather_and_air/"
 SENSOR_CSV<- "microclimate-sensors-data.csv"
 
 ## ---- BOM loader ----
@@ -141,7 +141,7 @@ bom_for_join <- bom_daily |>
          airtemperature_bom, relativehumidity_bom,
          averagewindspeed_bom, atmosphericpressure_bom)
 
-sensor_daily <- read_microclimate_daily(SENSOR_CSV)
+sensor_daily <- read_microclimate_daily(BOM_DIR+SENSOR_CSV)
 
 make_calendar_feed <- function(bom_for_join, sensor_daily) {
   bom_for_join |>
