@@ -1,18 +1,4 @@
 # Weather server logic will go here
-
-# install.packages(c("shiny","bslib","shinyWidgets","sortable","lubridate","dplyr","tidyr","stringr"))
-
-library(shiny)
-library(bslib)
-library(shinyWidgets)
-library(sortable)
-library(readr)
-library(dplyr)
-library(lubridate)
-library(tidyr)
-library(stringr)
-library(later)
-
 # Summarise metrics for a selected period
 summarise_period_box <- function(feed, start_date, end_date) {
   d <- feed |> filter(date >= start_date, date <= end_date)
@@ -39,11 +25,11 @@ summarise_period_box <- function(feed, start_date, end_date) {
 }
 
 #------------------------------------------------------------#
-## ---- File paths (adjust for your folders) ----
+# File paths
 BOM_DIR   <- "../../data/raw/weather_and_air/"
 SENSOR_CSV<- "microclimate-sensors-data.csv"
 
-## ---- BOM loader ----
+# BOM loader
 read_bom_month <- function(path) {
   lines <- readr::read_lines(path, n_max = 60, locale = locale(encoding = "latin1"))
   hdr_idx <- which(stringr::str_detect(lines, "^,?\\s*Date\\b"))[1]
@@ -141,7 +127,7 @@ bom_for_join <- bom_daily |>
          airtemperature_bom, relativehumidity_bom,
          averagewindspeed_bom, atmosphericpressure_bom)
 
-sensor_daily <- read_microclimate_daily(BOM_DIR+SENSOR_CSV)
+sensor_daily <- read_microclimate_daily(paste(BOM_DIR, SENSOR_CSV, sep = ""))
 
 make_calendar_feed <- function(bom_for_join, sensor_daily) {
   bom_for_join |>
@@ -281,7 +267,7 @@ trip_tab_ui <- function(id) {
       })();
     ")),
     
-    # JS: move Air Datepicker's visible month/year (robust instance lookup)
+    # move Air Datepicker's visible month/year (robust instance lookup)
     tags$script(HTML("
     (function(){
       function esc(id){ return '#'+id.replace(/([:\\.\\[\\],])/g, '\\\\$1'); }
@@ -367,7 +353,7 @@ trip_tab_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Activity list (all always shown)
+    # Activity list (all options need to be always shown)
     activities <- tibble::tibble(
       key   = c("barbecue","hiking","picnic","climbing","swimming",
                 "museum","exhibition","cafe_restaurant"),
@@ -458,7 +444,7 @@ trip_tab_server <- function(id) {
     weather_emoji <- function(w) c(sunny="☀️", cloudy="⛅️", rainy="🌧️")[w]
     air_badge <- function(a) c(good="🟢", moderate="🟡", poor="🔴")[a]
     
-    # Summary table
+    # Summary table 
     output$range_summary <- renderUI({
       df <- daily(); req(nrow(df) > 0)
       tags$table(class="table table-sm",
