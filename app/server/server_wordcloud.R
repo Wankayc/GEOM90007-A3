@@ -2,7 +2,7 @@
 server <- function(input, output, session) {
   
   # Fix for Tableau viz sizing issues on different tabs
-  observeEvent(input$mynav, {
+  observeEvent(input$nav, {
     runjs('dispatchEvent(new Event("resize"))')
   })
   
@@ -25,7 +25,7 @@ server <- function(input, output, session) {
     ', selected_theme))
     
     # Switch to the Sub Themes tab (just like the teacher's example!)
-    updateNavbarPage(session, 'mynav', selected='Sub Themes')
+    updateNavbarPage(session, 'nav', selected='Sub Themes')
   })
   
   # Optional: react to clicks on sub cloud
