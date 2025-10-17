@@ -10,6 +10,13 @@ library(dplyr)
 library(ggplot2)
 library(sf)
 library(here)
+library(bslib)
+library(sortable)
+library(lubridate)
+library(tidyr)
+library(readr)
+library(stringr)
+library(later)
 library('shinyjs')
 
 # Load the GEOM90007 Tableau in Shiny library
