@@ -17,6 +17,10 @@ library(tidyr)
 library(readr)
 library(stringr)
 library(later)
+library('shinyjs')
+
+# Load the GEOM90007 Tableau in Shiny library
+source('tableau-in-shiny-v1.2.R')
 
 # Load existing setup and data processing
 # source(here::here("R", "setup.R"))
