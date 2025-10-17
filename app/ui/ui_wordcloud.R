@@ -6,7 +6,7 @@ main_cloud_tab <- tabPanel(
     style='color: #666; font-style: italic; margin-bottom: 10px;'),
   tableauPublicViz(
     id='mainCloudViz',       
-    url='https://public.tableau.com/views/mymaincloud/Maincloud',
+    url='https://public.tableau.com/views/Mainwordcloud/Maincloud',
     height="85vh"
   )
 )
@@ -19,7 +19,7 @@ sub_cloud_tab <- tabPanel(
     style='color: #666; font-style: italic; margin-bottom: 10px;'),
   tableauPublicViz(
     id='subCloudViz',       
-    url='https://public.tableau.com/views/mysubcloud/Subthemecloud',
+    url='https://public.tableau.com/views/Subwordcloud/Subthemecloud',
     height="85vh"
   )
 )
