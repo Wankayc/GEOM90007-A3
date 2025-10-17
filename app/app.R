@@ -1,10 +1,11 @@
 # Main Shiny app file
-library(shiny)
 
-# Source all components
+# Source the global configuration
 source("global.R")
-source("ui.R")
-source("server.R")
+
+# Source the main UI and server files
+source("ui/ui_main.R")
+source("server/server_main.R")
 
 # Run the application
 shinyApp(ui = ui, server = server)
