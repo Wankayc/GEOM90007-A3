@@ -37,62 +37,6 @@ tabPanel(
   sidebarLayout(
     sidebarPanel(
       width = 3,
-      # Route planning
-      h4("Route Planning"),
-      pickerInput(
-        "start_location",
-        "Start Location:",
-        choices = "Loading...",
-        options = list(`live-search` = TRUE)
-      ),
-      pickerInput(
-        "end_location", 
-        "End Location:",
-        choices = "Loading...",
-        options = list(`live-search` = TRUE)
-      ),
-      
-      radioButtons(
-        "travel_mode",
-        "Travel Mode:",
-        choices = c(
-          "Walking" = "walking",
-          "Public Transport" = "transit",
-          "Cycling" = "cycling"
-        ),
-        selected = "walking"
-      ),
-      
-      actionButton("calculate_route", "Get Directions", 
-                   icon = icon("directions"), 
-                   class = "btn-primary"),
-      
-      hr(),
-      
-      # Places filter
-      h4("Places Filter"),
-      sliderInput("opening_hours", "Filter by Opening Time:",
-                  min = 0, max = 24, value = c(9, 17),
-                  step = 1, post = ":00"),
-      
-      awesomeCheckboxGroup(
-        "place_types",
-        "Place Types:",
-        choices = c(
-          "Cafes" = "cafe",
-          "Restaurants" = "restaurant", 
-          "Parks" = "park",
-          "Public Toilets" = "toilet",
-          "BBQ Spots" = "bbq",
-          "Bars" = "bar",
-          "Shopping" = "shopping"
-        ),
-        selected = c("cafe", "restaurant", "park", "toilet", "bbq", "bar", "shopping"),
-        status = "primary"
-      ),
-      
-      actionButton("toggle_places", "Toggle All Places", class = "btn-xs btn-info")
-=======
       
       h4(icon("clock"), " Operating Hours Filter"),
       sliderInput(
@@ -100,10 +44,10 @@ tabPanel(
         "Show places open between:",
         min = 0,
         max = 24,
-        value = c(7, 23),  # 雙向：預設 7:00 到 23:00
+        value = c(7, 23),
         step = 1,
         post = ":00",
-        dragRange = TRUE  # 允許拖動整個範圍
+        dragRange = TRUE
       ),
       helpText("Drag to filter places by operating hours range"),
       
@@ -174,13 +118,6 @@ tabPanel(
     
     mainPanel(
       width = 9,
-      box(
-        width = 12,
-        title = "Interactive Map & Directions",
-        status = "primary",
-        solidHeader = TRUE,
-        leafletOutput("transport_map", height = "700px")
-=======
       div(
         id = "google_map_wrapper",
         google_mapOutput("google_map", height = "100%"),
@@ -191,19 +128,19 @@ tabPanel(
           h5(style = "margin: 0 0 10px 0; font-weight: 600;", "Route Summary"),
           div(class = "legend-item",
               span(class = "legend-swatch", 
-                   style = sprintf("background: %s;", "#2ca02c")),
+                   style = "background: #2ca02c;"),
               span("Driving")),
           div(class = "legend-item",
               span(class = "legend-swatch", 
-                   style = sprintf("background: %s;", "#1f77b4")),
+                   style = "background: #1f77b4;"),
               span("Transit")),
           div(class = "legend-item",
               span(class = "legend-swatch", 
-                   style = sprintf("background: %s;", "#ff7f0e")),
+                   style = "background: #ff7f0e;"),
               span("Walking")),
           div(class = "legend-item",
               span(class = "legend-swatch", 
-                   style = sprintf("background: %s;", "#9467bd")),
+                   style = "background: #9467bd;"),
               span("Cycling")),
           tags$hr(style = "margin: 10px 0;"),
           htmlOutput("route_summary_text")
@@ -214,8 +151,7 @@ tabPanel(
   
   # JavaScript for Places Autocomplete & Geolocation
   tags$script(HTML("
-    // Bind Google Places Autocomplete to text inputs
-    // Browser Geolocation (改良版)
+    // Browser Geolocation
     Shiny.addCustomMessageHandler('requestGeolocation', function(config) {
       if (!navigator.geolocation) {
         Shiny.setInputValue(config.callback, {
@@ -246,7 +182,7 @@ tabPanel(
               errorMsg = 'Request timeout';
               break;
       }
-          
+        
           Shiny.setInputValue(config.callback, {
             error: errorMsg
           }, { priority: 'event' });
