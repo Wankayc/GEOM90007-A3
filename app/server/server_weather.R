@@ -132,7 +132,7 @@ bom_for_join <- bom_daily |>
          airtemperature_bom, relativehumidity_bom,
          averagewindspeed_bom, averagecloud_bom)
 
-sensor_daily <- read_microclimate_daily(SENSOR_CSV)
+sensor_daily <- read_microclimate_daily(paste0(BOM_DIR, SENSOR_CSV))
 
 make_calendar_feed <- function(bom_for_join, sensor_daily) {
   bom_for_join |>
