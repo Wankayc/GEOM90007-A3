@@ -5,6 +5,7 @@ source("global.R")
 
 # Source the main UI and server files
 source("ui/ui_main.R")
+source("ui/ui_wordcloud.R") 
 source("server/server_main.R")
 
 # Run the application
