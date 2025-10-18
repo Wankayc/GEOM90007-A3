@@ -28,7 +28,9 @@ observe({
     "end_location",
     choices = locations,
     selected = "Southern Cross Station"
-=======
+  )
+}) # <<< FIX: This block was not closed correctly.
+
 # Initialize map state
 map_rv <- reactiveValues(
   start = NULL,
@@ -50,21 +52,6 @@ output$google_map <- renderGoogle_map({
     libraries = "places",
     event_return_type = "list"
   )
-})
-
-# ===== INITIALIZE DEFAULT PLACES =====
-observe({
-  req(input$transport_map_bounds)
-  
-  map_proxy <- leafletProxy("transport_map") %>% 
-    clearShapes() %>%
-    clearMarkers() %>%
-    clearControls()
-=======
-  if (exists("DEFAULT_PLACES")) {
-    map_rv$default_places <- DEFAULT_PLACES
-    map_rv$filtered_places <- DEFAULT_PLACES
-  }
 })
 
 # ===== BIND PLACES AUTOCOMPLETE =====
@@ -495,7 +482,6 @@ observeEvent(input$get_directions, {
       duration = 5
     )
   }
->>>>>>> 25c4df9 (Map Page and Server Function - v1)
 })
 
 # ===== ROUTE SUMMARY OUTPUT =====
@@ -537,22 +523,3 @@ observeEvent(input$map_layers, {
     )
   }
 })
-<<<<<<< HEAD
-
-observeEvent(input$reset_map, {
-  updateSliderInput(session, "map_zoom", value = 12)
-})
-
-# Transport Map
-output$transport_map <- renderLeaflet({
-  leaflet() %>%
-    addTiles() %>%
-    setView(lng = 144.9631, lat = -37.8136, zoom = 13) %>%
-    addMarkers(lng = 144.9631, lat = -37.8136, popup = "Melbourne CBD")
-})
-
-observeEvent(input$calculate_route, {
-  showNotification("Route calculation feature to be implemented", type = "message")
-})
-=======
->>>>>>> 25c4df9 (Map Page and Server Function - v1)

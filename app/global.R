@@ -19,9 +19,10 @@ library(readr)
 library(stringr)
 library(later)
 library('shinyjs')
+library(googleway)
 
 # Load the GEOM90007 Tableau in Shiny library
-source('tableau-in-shiny-v1.2.R')
+# source('tableau-in-shiny-v1.2.R') @Jiujiu you need to make sure this file exists within one of the folders
 
 # Google Maps API Key
 GOOGLE_MAPS_API_KEY <- Sys.getenv("GOOGLE_MAPS_API_KEY")
