@@ -1,8 +1,7 @@
 # Package installation and loading
 required_packages <- c(
   "shiny", "shinydashboard", "shinyWidgets", "leaflet", "tidyverse", 
-  "here", "sf", "readr", "shinycssloaders", "shinyjs"
-)
+  "here", "sf", "readr", "shinycssloaders", "shinyjs")
 
 # Install missing packages
 new_packages <- required_packages[!(required_packages %in% installed.packages()[,"Package"])]
