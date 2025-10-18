@@ -20,6 +20,7 @@ sub_cloud_tab <- tabPanel(
   h2('Sub Theme Word Cloud'),
   p('Sub themes related to your selected main theme', 
     style='color: #666; font-style: italic; margin-bottom: 10px;'),
+)
  # tableauPublicViz(
 #    id='subCloudViz',       
 #    url='https://public.tableau.com/views/mysubcloud/Subthemecloud',
