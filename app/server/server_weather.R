@@ -32,8 +32,9 @@ summarise_period_box <- function(feed, start_date, end_date) {
 
 #------------------------------------------------------------#
 # File paths
-BOM_DIR  <- "../data/raw/weather_and_air/"
-SENSOR_CSV <- "../data/raw/weather_and_air/microclimate-sensors-data.csv"
+BOM_DIR  <- "../../data/raw/weather_and_air/"
+SENSOR_CSV <- "../../data/raw/weather_and_air/microclimate-sensors-data.csv"
+
 
 # BOM loader
 read_bom_month <- function(path) {
@@ -84,7 +85,7 @@ read_bom_month <- function(path) {
   dplyr::arrange(df, date)
 }
 
-## ---- Microclimate (15-min) → daily summary ----
+# Microclimate (15-min) -> daily summary
 read_microclimate_daily <- function(path, start = as.Date("2024-09-01"),
                                     end = as.Date("2025-10-31")) {
   raw <- readr::read_csv(path, show_col_types = FALSE)
@@ -117,7 +118,7 @@ read_bom_range <- function(dir_path) {
   dplyr::bind_rows(purrr::map(files, read_bom_month)) |> dplyr::arrange(date)
 }
 
-## ---- Data preprocessing ----
+## Data preprocessing 
 bom_daily <- read_bom_range(BOM_DIR)
 
 bom_for_join <- bom_daily |>
@@ -346,13 +347,11 @@ trip_tab_ui <- function(id) {
       })();
     ")),
     
-    # JS
     tags$script(HTML("
     (function(){
       function esc(id){ return '#'+id.replace(/([:\\.\\[\\],])/g, '\\\\$1'); }
   
-      // Try to pull an ADP instance from a DOM node (many variants exist…)
-      function getInstanceFromNode(node){
+       function getInstanceFromNode(node){
         if (!node) return null;
         var $n = $(node);
         return (
@@ -366,17 +365,13 @@ trip_tab_ui <- function(id) {
         );
       }
   
-      // Find a candidate element by id; also try sibling/nearby containers like '#id-air'
       function findNode(id){
         var el = document.querySelector(esc(id));
         if (el) return el;
-        // inline container that shinyWidgets creates often uses '-air'
         var air = document.querySelector(esc(id + '-air'));
         if (air) return air;
-        // sometimes the calendar is the next sibling with class 'air-datepicker'
         var el2 = document.querySelector(esc(id) + ' + .air-datepicker');
         if (el2) return el2;
-        // last resort: any .air-datepicker under the same parent
         var parent = document.querySelector(esc(id))?.parentElement;
         if (parent){
           var any = parent.querySelector('.air-datepicker');
@@ -391,7 +386,6 @@ trip_tab_ui <- function(id) {
   
         var dp = getInstanceFromNode(node) || getInstanceFromNode($(node).prev()[0]);
         if (!dp){
-          // try also the '-air' container explicitly
           var nodeAir = findNode(id + '-air');
           dp = getInstanceFromNode(nodeAir);
         }
@@ -399,11 +393,8 @@ trip_tab_ui <- function(id) {
   
         var d = new Date(y, (m||1)-1, 1);
   
-        // v3 API
         if (typeof dp.setViewDate === 'function'){ dp.setViewDate(d); return true; }
-        // some builds: viewDate + update()
         if ('viewDate' in dp && typeof dp.update === 'function'){ dp.viewDate = d; dp.update(); return true; }
-        // last resort: selectDate silently (restore input text)
         if (typeof dp.selectDate === 'function'){
           var curValue = (node.tagName === 'INPUT') ? node.value : undefined;
           dp.selectDate(d, { silent: true });
@@ -414,10 +405,8 @@ trip_tab_ui <- function(id) {
       }
   
       Shiny.addCustomMessageHandler('airdp-set-view', function(p){
-        // try both '#id' and '#id-air'
         var ok = setViewById(p.id, p.year, p.month) || setViewById(p.id + '-air', p.year, p.month);
         if (ok) return;
-        // widget not ready yet? retry a couple of times
         setTimeout(function(){ setViewById(p.id, p.year, p.month) || setViewById(p.id + '-air', p.year, p.month); }, 50);
         setTimeout(function(){ setViewById(p.id, p.year, p.month) || setViewById(p.id + '-air', p.year, p.month); }, 150);
       });
@@ -425,49 +414,79 @@ trip_tab_ui <- function(id) {
   ")),
     
     tags$script(HTML("
-    (function(){
-      function valuesOf($list){
-        return $list.find('.rank-list-item')
-                    .map(function(){ return $(this).text().trim(); })
-                    .get();
+  (function(){
+    //debug
+    //console.log('Activity planner loaded');
+    
+    function valuesOf($list){
+      return $list.find('.rank-list-item')
+                  .map(function(){ return $(this).text().trim(); })
+                  .get();
+    }
+    
+    function pushState($list){
+      if (!$list || $list.length === 0) return;
+      var id = $list.attr('id'); 
+      if(!id) return;
+      
+      var vals = valuesOf($list);
+      
+      //console.log('pushState:', id, '| Count:', vals.length);
+      
+      // send status to Shiny
+      Shiny.setInputValue(id, vals.length > 0 ? vals : null, {priority:'event'});
+      Shiny.setInputValue(id + '_length', vals.length, {priority:'event'});
+      Shiny.setInputValue(id + '_changed', Math.random(), {priority:'event'});
+      
+      // if zero activity, remove it
+      if (vals.length === 0) {
+        var adviceId = id.replace('rank-list-trip-board_', 'trip-advice_');
+        
+        console.log('Original ID:', id);
+        console.log('Advice ID:', adviceId);
+        
+        setTimeout(function(){
+          var el = document.getElementById(adviceId);
+          if (el) {
+            el.innerHTML = '';
+            console.log('Advice cleared!');
+          } else {
+            console.log('Not found:', adviceId);
+          }
+        }, 10);
       }
-      function clearAdviceDom(id){
-        // id: 'trip-board_YYYY-MM-DD'  →  'trip-advice_YYYY-MM-DD'
-        var adviceId = id.replace('board_', 'advice_');
-        var el = document.getElementById(adviceId);
-        if (el) el.innerHTML = '';
-      }
-      function pushState($list){
-        if (!$list || $list.length === 0) return;
-        var id = $list.attr('id'); if(!id) return;
-        var vals = valuesOf($list);
+    }
   
-        // deliver current status
-        Shiny.setInputValue(id, vals, {priority:'event'});
-        Shiny.setInputValue(id + '_isempty', vals.length === 0, {priority:'event'});
-        Shiny.setInputValue(id + '_changed', Date.now(), {priority:'event'});
+    // when click
+    $(document).on('click', '.rank-list.chips.board .rank-list-item', function(e){
+      console.log('CLICK DETECTED!');
+      e.preventDefault();
+      e.stopPropagation();
+      
+      var $item = $(this);
+      var $list = $item.closest('.rank-list.chips.board');
+      
+      console.log('List ID:', $list.attr('id'));
+      console.log('Removing item:', $item.text().trim());
+      
+      $item.remove();
+      pushState($list);
+      
+      return false;
+    });
   
-        // if there is no activity, remove it from the advice board
-        if (vals.length === 0) clearAdviceDom(id);
-      }
-  
-      // click-to-remove (board lists only)
-      $(document).on('click', '.rank-list.chips.board .rank-list-item', function(){
-        if (document.querySelector('.sortable-ghost')) return;
-        var $list = $(this).closest('.rank-list.chips.board');
-        $(this).remove();
-        pushState($list);
+    const obs = new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        if (m.type === 'childList') {
+          var list = m.target.closest('.rank-list.chips.board');
+          if (list && list.id) {
+            pushState($(list));
+          }
+        }
       });
-  
-      // check drag/drop change
-      const obs = new MutationObserver(function(muts){
-        muts.forEach(function(m){
-          var list = m.target && m.target.closest && m.target.closest('.rank-list.chips.board');
-          if (list) pushState($(list));
-        });
-      });
-      obs.observe(document.body, {subtree:true, childList:true});
-    })();
+    });
+
+  })();
   ")),
     
     tags$style(HTML("
@@ -520,7 +539,7 @@ trip_tab_server <- function(id) {
       else if(wx$noise_mean <= 70) "🔊" else "📢"
       
       div(class="metrics-row",
-          # Temperature (stacked)
+          # Temperature
           div(class="chip stack",
               div(class="row1",
                   span(class="ico","🌡️"),
@@ -588,9 +607,13 @@ trip_tab_server <- function(id) {
     
     # Advisory function for warnings only
     day_advice <- function(row, acts_labels){
-      if (nrow(row)==0 || length(acts_labels)==0) return(NULL)
+      
+      if (nrow(row) == 0 || length(acts_labels) == 0) return(NULL)
+      
       acts_keys <- unname(label_to_key[acts_labels])
       acts_keys <- acts_keys[!is.na(acts_keys)]
+      
+      if (length(acts_keys) == 0) return(NULL)
       
       rainy <- !is.na(row$rain) && row$rain >= 1
       maxT  <- row$tmax
@@ -602,14 +625,17 @@ trip_tab_server <- function(id) {
       if (rainy && is_outdoor)
         msgs <- c(msgs, "☔ Rain expected — bring an umbrella.")
       if (!is.na(maxT) && maxT < 12 && any(acts_keys %in% c("swimming","picnic","hiking")))
-        msgs <- c(msgs, "🧥 It’s quite cold for outdoor activities.")
+        msgs <- c(msgs, "🧥 It's quite cold for outdoor activities.")
       if (!is.na(maxT) && maxT >= 32 && any(acts_keys %in% c("hiking","climbing","barbecue","picnic")))
         msgs <- c(msgs, "🥵 Very hot — stay hydrated and take breaks.")
       if (!is.na(pm25) && pm25 > 35 && is_outdoor)
         msgs <- c(msgs, "😷 Poor air quality — wear a mask.")
       
-      if (length(msgs))
-        div(class="advice-warn", paste(msgs, collapse=" "))
+      if (length(msgs) == 0) {
+        return(NULL)
+      }
+      
+      div(class="advice-warn", paste(msgs, collapse=" "))
     }
     
     # Date selection
@@ -698,7 +724,7 @@ trip_tab_server <- function(id) {
                       # Rain
                       div(class="chip stack",
                           div(class="row1",
-                              span(class="ico", if(!is.na(r$rain) && r$rain>=1) "🌧️" else "☀️"),
+                              span(class="ico", "🌧️"),
                               span(class="val", if(is.na(r$rain)) "–" else sprintf("%.0fmm", r$rain))
                           ),
                           span(class="cap","Rainfall")
@@ -714,7 +740,7 @@ trip_tab_server <- function(id) {
                       # Wind
                       div(class="chip stack",
                           div(class="row1",
-                              span(class="ico", if(is.na(r$averagewindspeed_bom)) "💨" else if(r$averagewindspeed_bom<20) "🍃" else if(r$averagewindspeed_bom<40) "💨" else "🌬️"),
+                              span(class="ico", "💨"),
                               span(class="val", if(is.na(r$averagewindspeed_bom)) "–" else sprintf("%.0f", r$averagewindspeed_bom)),
                               span(class="unit","km/h")
                           ),
@@ -799,19 +825,41 @@ trip_tab_server <- function(id) {
       lapply(ds, function(d){
         local({
           dd <- d
-          output[[paste0("advice_", dd)]] <- renderUI({
-            
-            #remove advice
-            empty_flag <- isTRUE(input[[paste0("board_", dd, "_isempty")]])
-            input[[paste0("board_", dd, "_changed")]]
-            if (empty_flag) return(NULL)
-            
-            labels <- input[[paste0("board_", dd)]] %||% character(0)
-            if (length(labels) == 0) return(NULL)
-            
-            wx <- calendar_feed |> dplyr::filter(date == dd) |> dplyr::slice(1)
-            day_advice(wx, labels)
-          })
+          
+          observeEvent(
+            {
+              input[[paste0("board_", dd)]]
+              input[[paste0("board_", dd, "_changed")]]
+              input[[paste0("board_", dd, "_length")]]
+            },
+            {
+              output[[paste0("advice_", dd)]] <- renderUI({
+                labels <- input[[paste0("board_", dd)]] %||% character(0)
+                
+                # for debugging
+                # cat("Date:", dd, "| Activities:", length(labels), "| Labels:", paste(labels, collapse=", "), "\n")
+                
+                if (length(labels) == 0) {
+                  cat("Returning NULL - no activities\n")
+                  return(tags$div())
+                }
+                
+                wx <- calendar_feed |> dplyr::filter(date == dd) |> dplyr::slice(1)
+                advice_result <- day_advice(wx, labels)
+                
+                # for debugging
+                # cat("Advice result is NULL:", is.null(advice_result), "\n")
+                
+                if (is.null(advice_result)) {
+                  return(tags$div())
+                }
+                
+                return(advice_result)
+              })
+            },
+            ignoreNULL = FALSE,
+            ignoreInit = TRUE
+          )
         })
       })
     })
