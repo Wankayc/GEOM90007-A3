@@ -18,11 +18,45 @@ library(tidyr)
 library(readr)
 library(stringr)
 library(later)
-library('shinyjs')
 library(googleway)
+library(ggiraph)
 
-# Load the GEOM90007 Tableau in Shiny library
-# source('tableau-in-shiny-v1.2.R') @Jiujiu you need to make sure this file exists within one of the folders
+source('tableau-in-shiny-v1.2.R')
+
+
+# read and clean data in wordcloud
+landmarks <- read.csv('landmarks.csv', stringsAsFactors = FALSE)
+cafe_restaurant <- read.csv('cafe_and_restaurant_2023.csv', stringsAsFactors = FALSE)
+barbecues <- read.csv('barbecues.csv', stringsAsFactors = FALSE)
+
+clean_data <- function(df) {
+  df %>%
+    rename_with(~gsub('\\s+', '_', .), everything()) %>%
+    rename_with(~gsub('\\.', '_', .), everything())
+}
+
+landmarks <- clean_data(landmarks)
+cafe_restaurant <- clean_data(cafe_restaurant)
+barbecues <- clean_data(barbecues)
+
+# merge data together
+theme_data <- bind_rows(
+  landmarks %>%
+    select(Name, Latitude, Longitude, Theme, Sub_Theme, Google_Maps_Rating) %>%
+    mutate(Google_Maps_Rating = as.character(Google_Maps_Rating),
+           Business_address = NA_character_),
+  cafe_restaurant %>%
+    select(Name, Latitude, Longitude, Theme, Sub_Theme, Google_Maps_Rating, Business_address) %>%
+    mutate(Google_Maps_Rating = as.character(Google_Maps_Rating)),
+  barbecues %>%
+    select(Name, Latitude, Longitude, Theme, Sub_Theme) %>%
+    mutate(Google_Maps_Rating = NA_character_,
+           Business_address = NA_character_)
+) %>%
+  mutate(Google_Rating = suppressWarnings(as.numeric(Google_Maps_Rating)))
+
+
+
 
 # Google Maps API Key
 GOOGLE_MAPS_API_KEY <- Sys.getenv("GOOGLE_MAPS_API_KEY")
