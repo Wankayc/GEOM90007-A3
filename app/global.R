@@ -3,9 +3,10 @@
 # Load required libraries
 library(shiny)
 library(shinythemes)
+library(shinyjs)
 library(leaflet)
-library(shinyWidgets)
-library(shinydashboard) 
+library(shinyWidgets) 
+library(shinydashboard)
 library(dplyr)
 library(ggplot2)
 library(sf)
@@ -18,74 +19,103 @@ library(readr)
 library(stringr)
 library(later)
 library('shinyjs')
+library(googleway)
 
 # Load the GEOM90007 Tableau in Shiny library
-source('tableau-in-shiny-v1.2.R')
+# source('tableau-in-shiny-v1.2.R') @Jiujiu you need to make sure this file exists within one of the folders
 
-# Load existing setup and data processing
-# source(here::here("R", "setup.R"))
-# source(here::here("R", "data_import.R"))
-# source(here::here("R", "data_processing.R"))
-# source(here::here("R", "functions.R"))
+# Google Maps API Key
+GOOGLE_MAPS_API_KEY <- Sys.getenv("GOOGLE_MAPS_API_KEY")
+if (GOOGLE_MAPS_API_KEY == "") {
+  GOOGLE_MAPS_API_KEY <- "AIzaSyCJ6vbSvUKeJS22fXE8qtr43P219eceeio"
+  warning("建議在 ~/.Renviron 設定 GOOGLE_MAPS_API_KEY")
+}
 
-# Pre-processed data storage
-# preprocessed_data <- new.env()
+# 路線顏色配置
+MODE_COLORS <- c(
+  driving = "#2ca02c",
+  transit = "#1f77b4", 
+  walking = "#ff7f0e",
+  bicycling = "#9467bd"
+)
 
 # Melbourne CBD coordinates
 MELBOURNE_CBD <- st_sfc(st_point(c(144.9631, -37.8136)), crs = 4326)
 
+# 預設地點資料（墨爾本知名地點）
+DEFAULT_PLACES <- data.frame(
+  name = c(
+    # Cafes
+    "Degraves Espresso Bar",
+    "Brother Baba Budan",
+    "Market Lane Coffee",
+    "Pellegrini's Espresso Bar",
+    "Hopetoun Tea Rooms",
+    "Seven Seeds Coffee",
+    
+    # Restaurants
+    "Chin Chin Restaurant",
+    "Cumulus Inc.",
+    "Supernormal",
+    "MoVida",
+    "The European",
+    
+    # Parks
+    "Fitzroy Gardens",
+    "Carlton Gardens",
+    "Alexandra Gardens",
+    "Royal Botanic Gardens",
+    "Flagstaff Gardens"
+  ),
+  type = c(
+    rep("cafe", 6),
+    rep("restaurant", 5),
+    rep("park", 5)
+  ),
+  lat = c(
+    # Cafes
+    -37.8154, -37.8163, -37.8141, -37.8102, -37.8159, -37.8049,
+    # Restaurants
+    -37.8081, -37.8117, -37.8118, -37.8150, -37.8152,
+    # Parks
+    -37.8142, -37.8047, -37.8256, -37.8304, -37.8108
+  ),
+  lng = c(
+    # Cafes
+    144.9686, 144.9652, 144.9654, 144.9628, 144.9692, 144.9584,
+    # Restaurants
+    144.9646, 144.9658, 144.9674, 144.9654, 144.9688,
+    # Parks
+    144.9799, 144.9711, 144.9748, 144.9803, 144.9557
+  ),
+  icon = c(
+    rep("☕", 6),
+    rep("🍽️", 5),
+    rep("🌳", 5)
+  ),
+  # 營業時間（24小時制）
+  open_time = c(
+    rep(7, 6),   # Cafes open at 7am
+    rep(12, 5),  # Restaurants open at 12pm
+    rep(6, 5)    # Parks open at 6am
+  ),
+  close_time = c(
+    rep(17, 6),  # Cafes close at 5pm
+    rep(23, 5),  # Restaurants close at 11pm
+    rep(20, 5)   # Parks close at 8pm
+  ),
+  stringsAsFactors = FALSE
+)
+
+
 # Store data in non-reactive variables first
 project_data_value <- NULL
-preprocessed_data_value <- NULL # preprocessed_data
-data_loaded_value <- TRUE  # Set to TRUE since we're not loading data
-
-# Load and process data - COMMENTED OUT
-# message("Loading radius-based transport dataset...")
-# raw_lines <- load_ptv_lines()
-# raw_stops <- load_transport_stops()
-# success <- process_transport_lines(raw_lines)
-# project_data_value <- process_transport_stops(raw_stops)
-
-# if (success && !is.null(project_data_value)) {
-#   message("RADIUS-BASED transport dataset loaded successfully!")
-#   data_loaded_value <- TRUE
-#   
-#   # Debugging info
-#   train_count <- nrow(preprocessed_data_value$metro_train)
-#   tram_count <- nrow(preprocessed_data_value$metro_tram)
-#   bus_count <- nrow(preprocessed_data_value$metro_bus)
-#   skybus_count <- nrow(preprocessed_data_value$skybus)
-#   total_stops <- nrow(project_data_value)
-#   
-#   message("RADIUS-BASED DATASET SUMMARY:")
-#   message("=======================================")
-#   message("COVERAGE RADIUS:")
-#   message("  🚆 Routes: 10km from Melbourne CBD")
-#   message("  📍 Stops: 15km from Melbourne CBD")
-#   message("")
-#   message("ROUTES (within 10km radius):")
-#   message("  - Metro Train: ", train_count, " routes")
-#   message("  - Metro Tram: ", tram_count, " routes") 
-#   message("  - Metro Bus: ", bus_count, " routes")
-#   message("  - SkyBus: ", skybus_count, " routes")
-#   message("")
-#   message("STOPS (within 15km radius):")
-#   message("  - Train stops: ", nrow(preprocessed_data_value$train_stops))
-#   message("  - Tram stops: ", nrow(preprocessed_data_value$tram_stops))
-#   message("  - Bus stops: ", nrow(preprocessed_data_value$bus_stops))
-#   message("  - TOTAL: ", total_stops, " stops")
-#   message("=======================================")
-#   
-# } else {
-#   message("Radius-based data loading failed")
-# }
+preprocessed_data_value <- NULL
+data_loaded_value <- TRUE
 
 # Central reactive values for cross-tab communication
 shared <- reactiveValues(
-  # Tab navigation
   navigate_to_tab = NULL,
-  
-  # Data selections (each tab can read/write)
   selections = list(
     wordcloud = list(
       selected_restaurant = NULL,
@@ -97,66 +127,37 @@ shared <- reactiveValues(
     ),
     map = list(
       selected_location = NULL,
-      view_state = list(zoom = 13, center = c(-37.8136, 144.9631))
+      view_state = list(
+        zoom = 13,
+        center = c(-37.8136, 144.9631)
+      ),
+      start = NULL,
+      end = NULL,
+      picking = NULL
     ),
     summary = list(
       time_range = NULL,
       filters = list()
     )
   ),
-  
-  # Shared datasets - populated from non-reactive variables
   datasets = list(
     restaurants = NULL,
     weather_data = NULL,
     transport_data = NULL,
-    preprocessed_data = preprocessed_data_value,
-    project_data = project_data_value
+    preprocessed_data = preprocessed_data_value
   ),
-  
-  # Cross-tab events (for triggering actions)
-  events = reactiveValues(
-    restaurant_selected = NULL,
-    location_changed = NULL,
-    date_range_updated = NULL,
-    filters_applied = NULL
-  ),
-  
-  # App state
-  data_loaded = data_loaded_value,
-  loading_message = "Data loading disabled for development"
+  data_loaded = data_loaded_value
 )
 
 # Helper functions for cross-tab communication
-navigate_to_tab <- function(tab_name, session) {
-  updateNavbarPage(session, "nav", selected = tab_name)
+get_restaurant_data <- function() {
+  shared$datasets$restaurants
 }
 
-set_selection <- function(tab, key, value) {
-  shared$selections[[tab]][[key]] <- value
+get_weather_data <- function() {
+  shared$datasets$weather_data
 }
 
-get_selection <- function(tab, key) {
-  shared$selections[[tab]][[key]]
-}
-
-trigger_event <- function(event_name, data = NULL) {
-  shared$events[[event_name]] <- data
-}
-
-# Data access helpers
 get_transport_data <- function() {
-  if (shared$data_loaded) {
-    return(shared$datasets$project_data)
-  } else {
-    return(NULL)
-  }
-}
-
-get_preprocessed_data <- function() {
-  if (shared$data_loaded) {
-    return(shared$datasets$preprocessed_data)
-  } else {
-    return(NULL)
-  }
+  shared$datasets$transport_data
 }
