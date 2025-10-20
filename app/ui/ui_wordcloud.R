@@ -99,13 +99,7 @@ sub_cloud_tab <- tabPanel(
 )
 
 
-tagList(
-  setUpTableauInShiny(),
-  page_css,
-  navbarPage(
-    id = "wc_nav",
-    title = NULL,
-    main_cloud_tab,
-    sub_cloud_tab
-  )
+list(
+  main_cloud_tab,
+  sub_cloud_tab
 )

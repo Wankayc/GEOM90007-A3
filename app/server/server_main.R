@@ -1,9 +1,10 @@
 server <- function(input, output, session) {
   
   # Render UI for each tab
-  output$wordcloud_ui <- renderUI({ 
-    source("ui/ui_wordcloud.R", local = TRUE)$value 
-  })
+  
+  # Word cloud UI is now loaded directly in main UI, not via renderUI
+  # output$wordcloud_ui <- renderUI({ 
+  #  source("ui/ui_wordcloud.R", local = TRUE)$value  })
   
   output$weather_ui <- renderUI({ 
     source("ui/ui_weather.R", local = TRUE)$value 
