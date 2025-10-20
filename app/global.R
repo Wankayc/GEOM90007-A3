@@ -21,13 +21,12 @@ library(later)
 library(googleway)
 library(ggiraph)
 
-source('tableau-in-shiny-v1.2.R')
-
+source(here("app", "tableau-in-shiny-v1.2.R"))
 
 # read and clean data in wordcloud
-landmarks <- read.csv('landmarks.csv', stringsAsFactors = FALSE)
-cafe_restaurant <- read.csv('cafe_and_restaurant_2023.csv', stringsAsFactors = FALSE)
-barbecues <- read.csv('barbecues.csv', stringsAsFactors = FALSE)
+landmarks <- read.csv(here('data', 'landmarks.csv'), stringsAsFactors = FALSE)
+cafe_restaurant <- read.csv(here('data', 'cafe_and_restaurant_2023.csv'), stringsAsFactors = FALSE)
+barbecues <- read.csv(here('data', 'barbecues.csv'), stringsAsFactors = FALSE)
 
 clean_data <- function(df) {
   df %>%
