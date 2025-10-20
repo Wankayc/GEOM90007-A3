@@ -9,7 +9,7 @@ observeEvent(input$mainCloudViz_mark_selection_changed, {
   selected_theme <- input$mainCloudViz_mark_selection_changed$Theme[1]
   if (is.null(selected_theme)) return()
   
-  updateNavbarPage(session, 'wc_nav', selected = 'Popular Attractions')
+  updateNavbarPage(session, 'nav', selected = 'Popular Attractions')
   updateRadioButtons(session, 'themeSingle', selected = selected_theme)
   
   runjs(sprintf('
