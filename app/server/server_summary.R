@@ -1,30 +1,102 @@
-summary_server <- function(input, output, session) {
-  # Navigation handlers (assuming these are for main app navigation)
-  observeEvent(input$goto_wordcloud, {
-    updateTabsetPanel(session, "main_navbar", "wordcloud")
+summary_server <- function(input, output, session, user_behavior) {
+  
+  # Create a reactive that tracks user behavior changes
+  personality_data <- reactive({
+    # Get the current click counts safely
+    clicks <- list(
+      accommodation = user_behavior$category_clicks$accommodation,
+      transport = user_behavior$category_clicks$transport,
+      attractions = user_behavior$category_clicks$attractions,
+      arts_culture = user_behavior$category_clicks$arts_culture,
+      food_drink = user_behavior$category_clicks$food_drink,
+      heritage = user_behavior$category_clicks$heritage,
+      leisure = user_behavior$category_clicks$leisure,
+      public_service = user_behavior$category_clicks$public_service,
+      shopping = user_behavior$category_clicks$shopping,
+      health_services = user_behavior$category_clicks$health_services
+    )
+    
+    # Calculate scores
+    scores <- list(
+      foodie = clicks$food_drink * 2,
+      culture_seeker = clicks$arts_culture + clicks$heritage,
+      nature_lover = clicks$attractions + clicks$leisure,
+      urban_explorer = clicks$transport + clicks$shopping,
+      wellness_enthusiast = clicks$health_services + clicks$leisure,
+      practical_traveler = clicks$accommodation + clicks$public_service
+    )
+    
+    max_score <- max(unlist(scores))
+    dominant <- names(scores)[which.max(unlist(scores))]
+    
+    # Personality mapping
+    if (max_score == 0) {
+      list(
+        type = "Melbourne Explorer",
+        icon = icon("binoculars"),
+        color = "#036B55", 
+        description = "Start clicking categories to discover your Melbourne personality!"
+      )
+    } else if (dominant == "foodie") {
+      list(type = "Food Lover", icon = icon("coffee"), color = "#6f4e37", description = "You're always searching for the next great meal or perfect brew!")
+    } else if (dominant == "culture_seeker") {
+      list(type = "Culture Connoisseur", icon = icon("landmark"), color = "#4B0082", description = "You appreciate art, history, and cultural experiences!")
+    } else if (dominant == "nature_lover") {
+      list(type = "Nature Enthusiast", icon = icon("tree"), color = "#228B22", description = "You love exploring parks, gardens, and outdoor spaces!")
+    } else if (dominant == "urban_explorer") {
+      list(type = "Urban Adventurer", icon = icon("city"), color = "#4169E1", description = "You thrive in the city and love discovering urban gems!")
+    } else if (dominant == "wellness_enthusiast") {
+      list(type = "Wellness Seeker", icon = icon("heart"), color = "#FF6B6B", description = "You prioritize health and relaxation in your travels!")
+    } else {
+      list(type = "Practical Traveler", icon = icon("map-signs"), color = "#FF8C00", description = "You're organized and plan your trips carefully!")
+    }
   })
   
-  observeEvent(input$goto_map, {
-    updateTabsetPanel(session, "main_navbar", "map") 
+  # Outputs with safety checks
+  output$personality_title <- renderText({
+    data <- personality_data()
+    if (is.null(data)) return("You are a Melbourne Explorer!")
+    paste("You are a", data$type, "!")
   })
   
-  observeEvent(input$goto_weather, {
-    updateTabsetPanel(session, "main_navbar", "weather")
+  output$personality_icon <- renderUI({
+    data <- personality_data()
+    if (is.null(data)) return(div(icon("binoculars"), style = "color: #036B55; font-size: 2.5em;"))
+    div(style = paste0("color:", data$color, "; font-size: 2.5em;"),
+        data$icon)
   })
   
-  # --- Handlers for the Summary Tab UI ---
+  output$personality_description <- renderText({
+    data <- personality_data()
+    if (is.null(data)) return("Start clicking categories to discover your Melbourne personality!")
+    data$description
+  })
   
-  # PDF export button
+  output$debug_outputs <- renderText({
+    clicks <- list(
+      accommodation = user_behavior$category_clicks$accommodation,
+      transport = user_behavior$category_clicks$transport,
+      attractions = user_behavior$category_clicks$attractions,
+      arts_culture = user_behavior$category_clicks$arts_culture,
+      food_drink = user_behavior$category_clicks$food_drink,
+      heritage = user_behavior$category_clicks$heritage,
+      leisure = user_behavior$category_clicks$leisure,
+      public_service = user_behavior$category_clicks$public_service,
+      shopping = user_behavior$category_clicks$shopping,
+      health_services = user_behavior$category_clicks$health_services
+    )
+    paste("Clicks:", paste(names(clicks), clicks, collapse = ", "))
+  })
+  
+  # Placeholder handlers
   observeEvent(input$export_pdf, {
     showNotification("PDF export will be implemented soon!", type = "message")
   })
   
-  # Left arrow for image carousel
   observeEvent(input$prev_image, {
     showNotification("Previous image - carousel to be implemented")
   })
   
-  # Right arrow for image carousel
   observeEvent(input$next_image, {
     showNotification("Next image - carousel to be implemented") 
   })

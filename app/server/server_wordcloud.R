@@ -1,3 +1,5 @@
+# Wordcloud tab server logic
+
 current_sub_theme <- reactiveVal(NULL)
 
 observeEvent(input$nav, {
@@ -25,6 +27,30 @@ observeEvent(input$mainCloudViz_mark_selection_changed, {
 # Click Theme to jump to the sun theme wordcolud
 observeEvent(input$themeSingle, {
   req(input$themeSingle)
+  
+  # --------- Personality tracking ----------
+  # This covers both direct radio button clicks AND wordcloud clicks that update radios
+  category_mapping <- list(
+    "Accommodation" = "accommodation",
+    "Transport" = "transport", 
+    "Attractions" = "attractions",
+    "Arts & Culture" = "arts_culture",
+    "Food & Drink" = "food_drink",
+    "Heritage" = "heritage",
+    "Leisure" = "leisure",
+    "Public Service" = "public_service",
+    "Shopping" = "shopping",
+    "Health Services" = "health_services"
+  )
+  
+  if (input$themeSingle %in% names(category_mapping)) {
+    category_name <- category_mapping[[input$themeSingle]]
+    if (exists("user_behavior") && !is.null(user_behavior)) {
+      user_behavior$category_clicks[[category_name]] <- user_behavior$category_clicks[[category_name]] + 1
+    }
+  }
+  # ---------------------------------
+  
   runjs(sprintf('
       (function(){
         let viz = document.getElementById("subCloudViz");
@@ -57,6 +83,33 @@ observeEvent(input$subCloudViz_mark_selection_changed, {
       }, error = function(e) {})
     }
   }
+  
+  # --------- Personality tracking -----------
+  if (!is.null(selected_sub) && nchar(selected_sub) > 0) {
+    # Get the current theme to know which category we're in
+    current_theme <- input$themeSingle
+    category_mapping <- list(
+      "Accommodation" = "accommodation",
+      "Transport" = "transport", 
+      "Attractions" = "attractions",
+      "Arts & Culture" = "arts_culture",
+      "Food & Drink" = "food_drink",
+      "Heritage" = "heritage",
+      "Leisure" = "leisure",
+      "Public Service" = "public_service",
+      "Shopping" = "shopping",
+      "Health Services" = "health_services"
+    )
+    
+    if (!is.null(current_theme) && current_theme %in% names(category_mapping)) {
+      category_name <- category_mapping[[current_theme]]
+      if (exists("user_behavior") && !is.null(user_behavior)) {
+        user_behavior$category_clicks[[category_name]] <- user_behavior$category_clicks[[category_name]] + 1
+      }
+    }
+  }
+  # ----------------------
+  
   if (!is.null(selected_sub) && nchar(selected_sub) > 0) current_sub_theme(selected_sub) else current_sub_theme(NULL)
 })
 
@@ -166,3 +219,31 @@ output$plot_ranking <- renderGirafe({
     )
   )
 })
+
+# ---------- Personality Tracking - bar chart ---------
+observeEvent(input$plot_ranking_selected, {
+  if (!is.null(input$plot_ranking_selected)) {
+    # Get the current sub-theme to know which category we're in
+    current_theme <- input$themeSingle
+    category_mapping <- list(
+      "Accommodation" = "accommodation",
+      "Transport" = "transport", 
+      "Attractions" = "attractions",
+      "Arts & Culture" = "arts_culture",
+      "Food & Drink" = "food_drink",
+      "Heritage" = "heritage",
+      "Leisure" = "leisure",
+      "Public Service" = "public_service",
+      "Shopping" = "shopping",
+      "Health Services" = "health_services"
+    )
+    
+    if (!is.null(current_theme) && current_theme %in% names(category_mapping)) {
+      category_name <- category_mapping[[current_theme]]
+      if (exists("user_behavior") && !is.null(user_behavior)) {
+        user_behavior$category_clicks[[category_name]] <- user_behavior$category_clicks[[category_name]] + 1
+      }
+    }
+  }
+})
+# ---------------------------

@@ -3,7 +3,6 @@ div(id = "summary-tab-content",
     # Placeholder UI for summary tab
     tags$head(
       tags$style(HTML("
-      
       #summary-tab-content {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         padding: 20px;
@@ -27,8 +26,8 @@ div(id = "summary-tab-content",
         cursor: pointer;
         margin-bottom: 25px;
         display: inline-block;
-        font-weight: normal; /* Override default bold */
-        font-size: 1rem; /* Match default font size */
+        font-weight: normal;
+        font-size: 1rem;
       }
       
       #summary-tab-content .main-title {
@@ -37,7 +36,6 @@ div(id = "summary-tab-content",
         margin-bottom: 25px;
       }
 
-      /* Custom card for the light theme */
       #summary-tab-content .custom-card {
         background-color: #ffffff;
         border: 1px solid #dee2e6;
@@ -53,7 +51,6 @@ div(id = "summary-tab-content",
         color: #343a40;
       }
 
-      /* Places to Visit Carousel Styling */
       #summary-tab-content .carousel-content {
         display: flex;
         align-items: center;
@@ -76,7 +73,6 @@ div(id = "summary-tab-content",
         color: #212529;
       }
 
-      /* Itinerary Table Styling */
       #summary-tab-content .itinerary-table {
         width: 100%;
         border-collapse: separate;
@@ -115,7 +111,6 @@ div(id = "summary-tab-content",
         color: #6c757d;
       }
 
-      /* Right Panel Styling */
       #summary-tab-content .personality-card {
         background-color: #ffffff;
         color: #282c34;
@@ -126,14 +121,21 @@ div(id = "summary-tab-content",
         justify-content: space-between;
         margin-bottom: 25px;
         border: 1px solid #dee2e6;
+        transition: all 0.3s ease;
       }
       #summary-tab-content .personality-card h4 {
         font-weight: bold;
-        margin: 0;
+        margin: 0 0 8px 0;
       }
-      #summary-tab-content .personality-card .coffee-icon {
+      #summary-tab-content .personality-card .personality-icon {
         font-size: 2.5em;
-        color: #282c34;
+        transition: all 0.3s ease;
+      }
+      #summary-tab-content .personality-description {
+        margin: 0;
+        color: #666;
+        font-size: 0.9em;
+        line-height: 1.4;
       }
 
       #summary-tab-content .pdf-preview {
@@ -221,10 +223,18 @@ div(id = "summary-tab-content",
       
       column(
         4,
+        # Personality Card
         div(
-          class = "custom-card",
-          h4("You are a coffee lover!"),
-          div(class = "coffee-icon", icon("coffee"))
+          class = "personality-card",
+          style = "display: flex; align-items: center; justify-content: space-between; min-height: 120px;",
+          div(
+            style = "flex: 1;",
+            h4(textOutput("personality_title", inline = TRUE)),
+            p(textOutput("personality_description"), class = "personality-description")
+          ),
+          div(
+            uiOutput("personality_icon")
+          )
         ),
         
         actionButton("export_pdf", "Export itinerary as pdf", class = "export-button"),
