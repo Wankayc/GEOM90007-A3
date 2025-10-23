@@ -19,7 +19,7 @@ ui <- tagList(
     id = "app-content",
     style = "display: none;",  # Hidden until data loads
     navbarPage(
-      title = "GEOM90007 Assignment 3",
+      title = "Melbourne Explorer",
       id = "nav",
       theme = shinythemes::shinytheme("flatly"),
       useShinyjs(),
