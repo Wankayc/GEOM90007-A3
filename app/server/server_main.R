@@ -30,8 +30,9 @@ server <- function(input, output, session) {
   })
   
   # Render Tab UI
-  output$weather_ui <- renderUI({ 
-    source("ui/ui_weather.R", local = TRUE)$value 
+  output$weather_ui <- renderUI({
+    source("ui/ui_weather.R", local = TRUE)  # loads weather_tab_ui() once into this env
+    weather_tab_ui()                         # return the fragment
   })
   
   output$map_ui <- renderUI({ 
@@ -48,5 +49,6 @@ server <- function(input, output, session) {
   source("server/server_map.R", local = TRUE)
   source("server/server_summary.R", local = TRUE)
   
+  trip_tab_server("trip") 
   summary_server(input, output, session, user_behavior)
 }
