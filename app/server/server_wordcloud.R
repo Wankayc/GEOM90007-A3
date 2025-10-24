@@ -2,6 +2,9 @@
 
 current_sub_theme <- reactiveVal(NULL)
 
+# Create a reactive variable to share selected sub_theme with map module
+selected_sub_theme_for_map <- reactiveVal(NULL)
+
 observeEvent(input$nav, {
   runjs('dispatchEvent(new Event("resize"))')
 })
@@ -108,9 +111,38 @@ observeEvent(input$subCloudViz_mark_selection_changed, {
       }
     }
   }
-  # ----------------------
-  
+
   if (!is.null(selected_sub) && nchar(selected_sub) > 0) current_sub_theme(selected_sub) else current_sub_theme(NULL)
+})
+
+
+# Handle "View on Map" button click
+observeEvent(input$showMapBtn, {
+  # Get the currently selected sub_theme
+  sub_theme <- current_sub_theme()
+  
+  # If no sub_theme is selected, show a warning notification
+  if (is.null(sub_theme)) {
+    showNotification(
+      "Please select an attraction type first by clicking on the word cloud above.",
+      type = "warning",
+      duration = 3
+    )
+    return()
+  }
+  
+  # Save the selected sub_theme for the map module to use
+  selected_sub_theme_for_map(sub_theme)
+  
+  # Switch to the map tab (change 'Map' to your classmate's actual tab name)
+  updateNavbarPage(session, 'nav', selected = 'Map')
+  
+  # Optional: Show a success notification
+  showNotification(
+    paste0("Showing locations for: ", sub_theme),
+    type = "message",
+    duration = 2
+  )
 })
 
 # The top 5-20 ranking
@@ -246,4 +278,3 @@ observeEvent(input$plot_ranking_selected, {
     }
   }
 })
-# ---------------------------

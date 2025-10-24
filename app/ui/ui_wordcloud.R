@@ -80,7 +80,14 @@ sub_cloud_tab <- tabPanel(
       hr(style='border:0; border-top:3px solid #036B55; margin:20px 0 15px 0;'),
       fluidRow(
         column(width = 9,
-               h2('Top Rated Places by Google Reviews'),
+               # Added button before the ranking chart
+               div(style='margin-bottom: 15px;',
+                   h2('Top Rated Places by Google Reviews', style='display:inline-block; margin-right:20px;'),
+                   actionButton('showMapBtn', 
+                                'View on Map',
+                                icon = icon('map-marker-alt'),
+                                style = 'background-color:#036B55; color:white; padding:8px 20px; border:none; border-radius:5px; font-size:14px; font-weight:600; cursor:pointer; vertical-align:middle;')
+               ),
                girafeOutput('plot_ranking', height='95vh')
         ),
         column(width = 3,
