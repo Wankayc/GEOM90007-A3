@@ -131,18 +131,19 @@ observeEvent(input$showMapBtn, {
     return()
   }
   
-  # Save the selected sub_theme for the map module to use
-  selected_sub_theme_for_map(sub_theme)
-  
-  # Switch to the map tab (change 'Map' to your classmate's actual tab name)
+  # 先跳转到地图页面
   updateNavbarPage(session, 'nav', selected = 'Map')
   
-  # Optional: Show a success notification
-  showNotification(
-    paste0("Showing locations for: ", sub_theme),
-    type = "message",
-    duration = 2
-  )
+  # 延迟更新，等地图加载完成
+  shinyjs::delay(800, {
+    selected_sub_theme_for_map(sub_theme)
+    
+    showNotification(
+      paste0("Loading locations for: ", sub_theme),
+      type = "message",
+      duration = 2
+    )
+  })
 })
 
 # The top 5-20 ranking
