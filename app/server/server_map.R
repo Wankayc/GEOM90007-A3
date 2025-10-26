@@ -523,3 +523,88 @@ observeEvent(input$map_layers, {
     )
   }
 })
+
+# ===== new here! =====
+observeEvent(selected_sub_theme_for_map(), {
+  sub_theme <- selected_sub_theme_for_map()
+  
+  # debug
+  cat("\n========== MAP DEBUG ==========\n")
+  cat("Received sub_theme:", sub_theme, "\n")
+  
+  if (is.null(sub_theme) || sub_theme == "") {
+    cat("sub_theme is NULL or empty, returning\n")
+    return()
+  }
+  
+  # check if theme_data exists
+  if (!exists("theme_data")) {
+    cat("ERROR: theme_data not found!\n")
+    showNotification("Data not loaded", type = "error", duration = 3)
+    return()
+  }
+  
+  cat("theme_data rows:", nrow(theme_data), "\n")
+  cat("Available Sub_Themes:", unique(theme_data$Sub_Theme)[1:5], "...\n")
+  
+  # filter sub_theme from theme
+  places <- theme_data %>%
+    filter(Sub_Theme == sub_theme) %>%
+    filter(!is.na(Latitude) & !is.na(Longitude)) %>%
+    mutate(
+      lat = as.numeric(Latitude),
+      lng = as.numeric(Longitude),
+      name = as.character(Name),
+      rating = as.numeric(Google_Rating),
+      address = as.character(ifelse(!is.na(Business_address), Business_address, "")),
+      # info_window
+      info_text = paste0(
+        "<b>", name, "</b><br>",
+        ifelse(!is.na(rating) & rating > 0, 
+               paste0("⭐ Rating: ", sprintf("%.1f", rating), "<br>"), 
+               ""),
+        ifelse(nchar(address) > 0, address, "")
+      )
+    ) %>%
+    select(name, lat, lng, rating, address, info_text)
+  
+  cat("Found", nrow(places), "places\n")
+  
+  if (nrow(places) == 0) {
+    cat("No places found for:", sub_theme, "\n")
+    cat("===============================\n\n")
+    showNotification(
+      paste0("No locations found for: ", sub_theme),
+      type = "warning",
+      duration = 3
+    )
+    return()
+  }
+  
+  cat("First 3 places:\n")
+  if (nrow(places) >= 1) cat("  -", places$name[1], "\n")
+  if (nrow(places) >= 2) cat("  -", places$name[2], "\n")
+  if (nrow(places) >= 3) cat("  -", places$name[3], "\n")
+  cat("===============================\n\n")
+  
+  # show locations on the map
+  google_map_update('google_map') %>%
+    clear_markers(layer_id = 'wordcloud_places') %>%
+    add_markers(
+      data = places,
+      lat = 'lat',
+      lon = 'lng',
+      info_window = 'info_text',
+      layer_id = 'wordcloud_places'
+    )
+  
+  # save to map_rv
+  map_rv$default_places <- places
+  map_rv$filtered_places <- places
+  
+  showNotification(
+    paste0("✓ Showing ", nrow(places), " places: ", sub_theme),
+    type = "message",
+    duration = 3
+  )
+}, ignoreNULL = TRUE, ignoreInit = TRUE)
