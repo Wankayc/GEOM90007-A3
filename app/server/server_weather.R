@@ -160,13 +160,13 @@ trip_tab_server <- function(id) {
     # Activity list (all)
     activities <- tibble::tibble(
       key   = c("barbecue","hiking","picnic","climbing","swimming",
-                "museum","exhibition","cafe","restaurant"),
+                "museum","exhibition","cafe"),
       label = c("🍖 barbecue","🥾 hiking","🧺 picnic","🧗 climbing","🏊️ swimming",
-                "🏛️ museum","🖼️ exhibition","☕️ cafe","🍽️ restaurant"),
-      type  = c(rep("outdoor",5), rep("indoor",4))
+                "🏛️ museum","🖼️ exhibition","☕️ cafe & restaurant"),
+      type  = c(rep("outdoor",5), rep("indoor",3))
     )
     
-    # to handle emozi -> convert UTF-8
+    # to handle emoji -> convert UTF-8
     activities$label <- enc2utf8(activities$label)
     
     label_to_key <- setNames(activities$key, activities$label)
@@ -175,6 +175,11 @@ trip_tab_server <- function(id) {
       v <- unname(label_to_key[lbls])
       v[is.na(v)] <- lbls
       v
+    }
+    
+    is_outdoor_present <- function(labels){
+      if (length(labels) == 0) return(FALSE)
+      any(to_keys(labels) %in% outdoor_keys)
     }
     
     day_badges <- function(row){
@@ -191,9 +196,6 @@ trip_tab_server <- function(id) {
       else if(wx$pm25_mean <= 35) "🟡" else "🔴"
       rain_ico <- if(!is.na(wx$rain) && wx$rain >= 5) "🌧️"
       else if(!is.na(wx$rain) && wx$rain >= 1) "🌦️" else "☀️"
-      noise_ico<- if(is.na(wx$noise_mean)) "🔇"
-      else if(wx$noise_mean <= 55) "🔉"
-      else if(wx$noise_mean <= 70) "🔊" else "📢"
       
       div(class="metrics-row",
           # Temperature
@@ -217,15 +219,6 @@ trip_tab_server <- function(id) {
               span(class="cap","Rainfall")
           ),
           
-          # Sunshine
-          div(class="chip stack",
-              div(class="row1",
-                  span(class="ico","✨"),
-                  span(class="val", if(is.na(wx$sun)) "–" else sprintf("%.1fh", wx$sun))
-              ),
-              span(class="cap","Sunshine")
-          ),
-          
           # Wind
           div(class="chip stack",
               div(class="row1",
@@ -235,6 +228,16 @@ trip_tab_server <- function(id) {
               ),
               span(class="cap","Wind")
           ),
+          
+          # Sunshine
+          div(class="chip stack",
+              div(class="row1",
+                  span(class="ico","✨"),
+                  span(class="val", if(is.na(wx$sun)) "–" else sprintf("%.1fh", wx$sun))
+              ),
+              span(class="cap","Sunshine")
+          ),
+          
           
           # PM2.5 / PM10
           div(class="chip stack",
@@ -248,16 +251,6 @@ trip_tab_server <- function(id) {
                        ))
               ),
               span(class="cap","PM2.5 / PM10")
-          ),
-          
-          # Noise
-          div(class="chip stack",
-              div(class="row1",
-                  span(class="ico", noise_ico),
-                  span(class="val", if(is.na(wx$noise_mean)) "–" else sprintf("%.0f", wx$noise_mean)),
-                  span(class="unit","dB")
-              ),
-              span(class="cap","Noise")
           )
       )
     }
@@ -364,7 +357,7 @@ trip_tab_server <- function(id) {
                       span(weather_label(r$rain, r$tmax))
                   ),
                   
-                  div(class="chips",
+                  div(class="chips summary-metrics",
                       # Temp
                       div(class="chip stack",
                           div(class="row1",
@@ -386,14 +379,6 @@ trip_tab_server <- function(id) {
                           ),
                           span(class="cap","Rainfall")
                       ),
-                      # Sunshine
-                      div(class="chip stack",
-                          div(class="row1",
-                              span(class="ico","✨"),
-                              span(class="val", if(is.na(r$sun)) "–" else sprintf("%.1fh", r$sun))
-                          ),
-                          span(class="cap","Sunshine")
-                      ),
                       # Wind
                       div(class="chip stack",
                           div(class="row1",
@@ -402,6 +387,14 @@ trip_tab_server <- function(id) {
                               span(class="unit","km/h")
                           ),
                           span(class="cap","Wind")
+                      ),
+                      # Sunshine
+                      div(class="chip stack",
+                          div(class="row1",
+                              span(class="ico","✨"),
+                              span(class="val", if(is.na(r$sun)) "–" else sprintf("%.1fh", r$sun))
+                          ),
+                          span(class="cap","Sunshine")
                       ),
                       # PM
                       div(class="chip stack",
@@ -415,15 +408,6 @@ trip_tab_server <- function(id) {
                               )
                           ),
                           span(class="cap","PM2.5 / PM10")
-                      ),
-                      # Noise
-                      div(class="chip stack",
-                          div(class="row1",
-                              span(class="ico", if(is.na(r$noise_mean)) "🔇" else if(r$noise_mean<=55) "🔉" else if(r$noise_mean<=70) "🔊" else "📢"),
-                              span(class="val", if(is.na(r$noise_mean)) "–" else sprintf("%.0f", r$noise_mean)),
-                              span(class="unit","dB")
-                          ),
-                          span(class="cap","Noise")
                       )
                   )
               )
@@ -468,7 +452,56 @@ trip_tab_server <- function(id) {
                   text = NULL, labels = NULL,
                   input_id = ns(paste0("board_", d)),
                   class = "rank-list chips board",
-                  options = sortable_options(group = list(name="act", pull=TRUE, put=TRUE))
+                  options = sortable_options(
+                    group = list(name="act", pull=TRUE, put=TRUE),
+                    delay = 100,
+                    delayOnTouchOnly = TRUE,
+                    filter = ".chip-remove",
+                    preventOnFilter = TRUE,
+                    onFilter = htmlwidgets::JS("
+                      function(evt){
+                        if (evt.target && evt.target.classList.contains('chip-remove')) {
+                          var el = evt.item;
+                          var list = el.closest('.rank-list.chips.board');
+                          el.parentNode.removeChild(el);
+                          if (list && list.id) { pushState($(list)); }
+                        }
+                      }
+                    "),
+                    onAdd = htmlwidgets::JS("
+                    function(evt){
+                      var list = evt.to;
+                      var el   = evt.item;
+                      if (!list || !list.id || !el) return;
+                
+                      var label = (el.textContent || '').trim();
+                      var dup = Array.from(list.querySelectorAll('.rank-list-item'))
+                        .some(function(n){ return n !== el && (n.textContent || '').trim() === label; });
+                
+                      if (dup){
+                        if (el.parentNode) el.parentNode.removeChild(el); // remve
+                      }
+                
+                      // sort by alphabet
+                      var items = Array.from(list.querySelectorAll('.rank-list-item'));
+                      items.sort(function(a,b){
+                        var ta = (a.textContent || '').trim().toLowerCase();
+                        var tb = (b.textContent || '').trim().toLowerCase();
+                        return ta.localeCompare(tb);
+                      });
+                      items.forEach(function(n){ list.appendChild(n); });
+                
+                      // synchronised
+                      if (typeof pushState === 'function') pushState($(list));
+                    }
+                  "),
+                    onRemove = htmlwidgets::JS("
+                    function(evt){ // moved away
+                      var from = evt.from;
+                      if (from && from.id) pushState($(from));
+                    }
+                  ")
+                  )
                 ),
                 uiOutput(ns(paste0("advice_", d)))
             )
@@ -488,6 +521,7 @@ trip_tab_server <- function(id) {
               input[[paste0("board_", dd)]]
               input[[paste0("board_", dd, "_changed")]]
               input[[paste0("board_", dd, "_length")]]
+              input[[paste0("board_", dd, "_has_outdoor")]] 
             },
             {
               output[[paste0("advice_", dd)]] <- renderUI({
@@ -496,26 +530,30 @@ trip_tab_server <- function(id) {
                 # for debugging
                 # cat("Date:", dd, "| Activities:", length(labels), "| Labels:", paste(labels, collapse=", "), "\n")
                 
-                if (length(labels) == 0) {
-                  cat("Returning NULL - no activities\n")
-                  return(tags$div())
+                has_out <- input[[paste0("board_", dd, "_has_outdoor")]]
+                if (identical(has_out, FALSE)) return(NULL)
+                
+                # If no outdoor activities, hide advice
+                if (!is_outdoor_present(labels)) {
+                  return(NULL)
                 }
                 
                 wx <- calendar_feed |> dplyr::filter(date == dd) |> dplyr::slice(1)
-                advice_result <- day_advice(wx, labels)
+                
+                # Pass only outdoor activity labels to day_advice
+                keys <- to_keys(labels)
+                outdoor_labels <- labels[keys %in% outdoor_keys]
+                advice_result <- day_advice(wx, outdoor_labels)
                 
                 # for debugging
-                # cat("Advice result is NULL:", is.null(advice_result), "\n")
+                #cat("Advice result is NULL:", is.null(advice_result), "\n")
                 
-                if (is.null(advice_result)) {
-                  return(tags$div())
-                }
-                
-                return(advice_result)
+                if (is.null(advice_result)) return(NULL)
+                advice_result
               })
             },
-            ignoreNULL = FALSE,
-            ignoreInit = TRUE
+            ignoreNULL = FALSE,  # Changed to FALSE to track removals
+            ignoreInit = FALSE   # Changed to FALSE to show advice on initial load
           )
         })
       })
