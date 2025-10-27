@@ -91,7 +91,7 @@ collapsible_css <- tags$style(HTML("
 
 # Heading spacing CSS (unify title/subtitle gaps)
 heading_spacing_css <- tags$style(HTML("
-  /* 只负责主标题与其后第一段副标题之间的间距；不影响其他部分 */
+  /* Control spacing between main titles and subtitles */
   h2.section-lead { margin: 0 0 8px 0 !important; }
   p.section-desc { margin: 0 0 16px 0 !important; }
 "))
@@ -104,7 +104,7 @@ main_cloud_tab <- tabPanel(
   title='Explore by Category',
   collapsible_css,
   collapsible_js,
-  heading_spacing_css,  # << 新增：统一主/副标题间距
+  heading_spacing_css,
   div(class='page-wrap',
       h2(class='section-lead', 'Explore Melbourne by Category'),
       p(class='section-desc', style='color:#666; font-size:14px; margin-bottom:16px; line-height:1.6;',
@@ -143,10 +143,8 @@ sub_cloud_tab <- tabPanel(
   div(class='page-wrap',
       fluidRow(
         column(width = 9,
-               h2(class='section-lead sub-cloud-title', 'Highlights in This Category'),
-               p(class='section-desc sub-cloud-desc', style='color:#666; font-size:14px; line-height:1.6; margin-bottom:16px;',
-                 'Click on any attraction type to view the highest-rated places.'
-               ),
+               uiOutput("dynamic_subcloud_title"),
+               uiOutput("dynamic_subcloud_desc"),
                div(class='wordcloud-container-wrapper',
                    div(class='full-bleed',
                        tableauPublicViz(
@@ -192,11 +190,11 @@ sub_cloud_tab <- tabPanel(
       fluidRow(
         column(width = 9,
                div(style='margin-bottom: 15px;',
-                   h2('Top Rated Places by Google Reviews', style='display:inline-block; margin-right:20px;'),
+                   uiOutput("dynamic_ranking_title"),
                    actionButton('showMapBtn', 
                                 'View on Map',
                                 icon = icon('map-marker-alt'),
-                                style = 'background-color:#036B55; color:white; padding:8px 20px; border:none; border-radius:5px; font-size:14px; font-weight:600; cursor:pointer; vertical-align:middle;')
+                                style = 'background-color:#036B55; color:white; padding:8px 20px; border:none; border-radius:5px; font-size:14px; font-weight:600; cursor:pointer; vertical-align:middle; margin-left:20px;')
                ),
                girafeOutput('plot_ranking', height='95vh')
         ),
@@ -220,4 +218,3 @@ list(
   main_cloud_tab,
   sub_cloud_tab
 )
-
