@@ -1,49 +1,68 @@
 # Trip tab UI
+
 trip_tab_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    h2("Trip-Weather Planner"),
-    fluidRow(
-      column(
-        width = 4,
-        div(class = "card p-3",
-            airDatepickerInput(
-              inputId = ns("range"),
-              label = NULL,
-              value = NULL,
-              minDate = as.Date("2024-09-01"),
-              maxDate = as.Date("2025-10-31"),
-              range = TRUE, inline = TRUE, autoClose = TRUE,
-              width = "100%"
-            )
-        )
-      ),
-      column(
-        width = 8,
-        div(class = "card p-3",
-            uiOutput(ns("range_summary"))
-        )
-      )
-    ),
-    
-    br(),
-    
-    div(class = "card p-3",
-        tags$small(class="text-muted d-block mb-2","Drag options into each date box"),
+    div(class = "page-wrap",                    
+        h2("Trip-Weather Planner"),             
+        p(style='color:#666; font-size:14px; margin-bottom:16px; line-height:1.6;',
+          "Click on any date range below to explore weather conditions and plan your trip activities. ",
+          "Data sources: ",
+          tags$a("Melbourne Open Data Portal",
+                 href="https://data.gov.au/data/dataset/microclimate-sensors-data",
+                 target="_blank", style="color:#036B55;"),
+          " and ",
+          tags$a("Australian Bureau of Meteorology",
+                 href="https://www.bom.gov.au/jsp/ncc/cdio/calendar/climate-calendar?stn_num=086338&month=10&day=14",
+                 target="_blank", style="color:#036B55;")
+        ),
         fluidRow(
-          column(6, h5("Outdoor activities"), uiOutput(ns("outdoor_list"))),
-          column(6, h5("Indoor activities"),  uiOutput(ns("indoor_list")))
-        )
-    ),
-    
-    div(class = "card p-3",
-        h4("Activity Planner"),
-        uiOutput(ns("itinerary_boards"))
-    ),
-    
-    tags$style(HTML("
+          column(
+            width = 4, class = "d-flex justify-content-center",  
+            div(class = "card p-3", 
+                airDatepickerInput(
+                  inputId = ns("range"),
+                  label = NULL,
+                  value = NULL,
+                  minDate = as.Date("2024-09-01"),
+                  maxDate = as.Date("2025-10-31"),
+                  range = TRUE, inline = TRUE, autoClose = TRUE,
+                  width = "100%"
+                )
+            )
+          ),
+          column(
+            width = 8,
+            div(class = "card p-3",
+                uiOutput(ns("range_summary"))
+            )
+          )
+        ),
+        
+        br(),
+        
+        div(class = "card p-3",
+            tags$small(class="text-muted d-block mb-2","Drag options into each date box"),
+            fluidRow(
+              column(6, h5("Outdoor activities"), uiOutput(ns("outdoor_list"))),
+              column(6, h5("Indoor activities"),  uiOutput(ns("indoor_list")))
+            )
+        ),
+        
+        div(class = "card p-3",
+            h4("Activity Planner"),
+            uiOutput(ns("itinerary_boards"))
+        ),
+        
+        tags$style(HTML("
       /* cards: minimal design */
       .card { border:1px solid #e5e7eb; border-radius:14px; box-shadow:none; }
+      
+      .cal-card{
+        display:inline-block;
+        padding:12px 14px;
+      }
+      .cal-card .air-datepicker{ margin:0 auto; }
     
       /* datepicker size adjustments */
       .air-datepicker-global-container, .air-datepicker { font-size:16px; }
@@ -92,7 +111,7 @@ trip_tab_ui <- function(id) {
       .chip .sub { font-size:.75rem; color:#6b7280; }
       .chip.muted { background:#f8fafc; border-color:#e5e7eb; }
     
-      /* ===== simple, compact tables ===== */
+      /* simple, compact tables */
       .table-clean.table-sm>tbody>tr>td,
       .table-clean>thead>tr>th {
         padding: .25rem .6rem;   /* tighter cell padding */
@@ -103,9 +122,8 @@ trip_tab_ui <- function(id) {
         border-spacing: 0;
       }
       .text-right { text-align: right; }
-      
-            
-      /* ---- compact data table tweaks ---- */
+             
+      /* compact data table tweaks */
       .table-clean th,
       .table-clean td { vertical-align: middle; }
       
@@ -116,8 +134,8 @@ trip_tab_ui <- function(id) {
       .wx-ico  { font-size:1.05rem; line-height:1; }
       
       .temp-cell .mean { font-weight:800; }
-      .temp-cell .min  { color:#2563eb; font-weight:600; }  /* blue */
-      .temp-cell .max  { color:#ef4444; font-weight:600; }  /* red  */
+      .temp-cell .min  { color:#2563eb; font-weight:600; }  /*blue*/
+      .temp-cell .max  { color:#ef4444; font-weight:600; }  /*red*/
       
       .pm-badge{ display:inline-flex; align-items:center; gap:.35rem; }
       
@@ -169,8 +187,21 @@ trip_tab_ui <- function(id) {
       .row-card .chips{ display:flex; flex-wrap:wrap; gap:8px; }
 
     ")),
+        
+        tags$style(HTML("
+      .summary-list .row-card { padding:14px 16px; } 
+      .summary-list .date { font-size:1.7rem; }
+      .summary-list .wx { font-size:1.7rem; }
+      .summary-list .wx span:first-child { font-size:1.7rem; line-height:1; }
     
-    tags$script(HTML("
+      .summary-metrics .chip { padding:8px 12px; } 
+      .summary-metrics .chip .ico  { font-size:1.4rem; } 
+      .summary-metrics .chip .val  { font-size:1.4rem; font-weight:700; } 
+      .summary-metrics .chip .unit { font-size:1.0rem; }        
+      .summary-metrics .chip .cap  { font-size:1.0rem; }      
+    ")),
+        
+        tags$script(HTML("
       (function(){
         function decorate(map){
           if(!map) return;
@@ -191,8 +222,8 @@ trip_tab_ui <- function(id) {
         obs.observe(document.body, {subtree:true, childList:true});
       })();
     ")),
-    
-    tags$script(HTML("
+        
+        tags$script(HTML("
     (function(){
       function esc(id){ return '#'+id.replace(/([:\\.\\[\\],])/g, '\\\\$1'); }
   
@@ -257,8 +288,9 @@ trip_tab_ui <- function(id) {
       });
     })();
   ")),
-    
-    tags$script(HTML("
+        
+        
+        tags$script(HTML("
   (function(){
     //debug
     //console.log('Activity planner loaded');
@@ -269,82 +301,104 @@ trip_tab_ui <- function(id) {
                   .get();
     }
     
+    function hasOutdoor(vals){
+      var outdoorEmoji = /^[🍖🥾🧺🧗🏊️]/;
+      return vals.some(function(v){ return outdoorEmoji.test(v); });
+    }
+        
     function pushState($list){
       if (!$list || $list.length === 0) return;
-      var id = $list.attr('id'); 
-      if(!id) return;
+      var domId = $list.attr('id');
+      if (!domId) return;
       
-      var vals = valuesOf($list);
+      var shinyId = domId.replace(/^rank-list-/, '');
       
-      //console.log('pushState:', id, '| Count:', vals.length);
+      window._pushTimers = window._pushTimers || {};
+      if (window._pushTimers[shinyId]) clearTimeout(window._pushTimers[shinyId]);
       
-      // send status to Shiny
-      Shiny.setInputValue(id, vals.length > 0 ? vals : null, {priority:'event'});
-      Shiny.setInputValue(id + '_length', vals.length, {priority:'event'});
-      Shiny.setInputValue(id + '_changed', Math.random(), {priority:'event'});
+      // read after all changes have been settled
       
-      // if zero activity, remove it
-      if (vals.length === 0) {
-        var adviceId = id.replace('rank-list-trip-board_', 'trip-advice_');
+      window._pushTimers[shinyId] = setTimeout(function(){ 
+      //requestAnimationFrame(function(){
+        var vals = valuesOf($list);
+        var hasOut = hasOutdoor(vals);
+      
+        //console.log('pushState:', id, '| Count:', vals.length);
         
-        console.log('Original ID:', id);
-        console.log('Advice ID:', adviceId);
+        // send status to Shiny
+        Shiny.setInputValue(shinyId, vals.length > 0 ? vals : null, {priority:'event'});
+        Shiny.setInputValue(shinyId + '_length', vals.length, {priority:'event'});
+        Shiny.setInputValue(shinyId + '_has_outdoor', hasOut, {priority:'event'});
+        Shiny.setInputValue(shinyId + '_changed', Math.random(), {priority:'event'});
         
-        setTimeout(function(){
-          var el = document.getElementById(adviceId);
-          if (el) {
-            el.innerHTML = '';
-            console.log('Advice cleared!');
-          } else {
-            console.log('Not found:', adviceId);
-          }
-        }, 10);
-      }
+        if (!hasOut) {
+          Shiny.setInputValue(shinyId + '_outdoor_gone', Math.random(), {priority:'event'});
+        }
+      
+        // if zero activity, remove it
+        //var adviceId = id.replace('rank-list-trip-board_', 'trip-advice_');
+        var adviceId = shinyId.replace('board_', 'advice_');
+        var el = document.getElementById(adviceId);
+        if (el && (!hasOut || vals.length === 0)) el.innerHTML = '';
+        
+        
+        delete window._pushTimers[shinyId];
+      }, 30);
     }
-  
-    // when click
-    $(document).on('click', '.rank-list.chips.board .rank-list-item', function(e){
-      console.log('CLICK DETECTED!');
-      e.preventDefault();
-      e.stopPropagation();
-      
-      var $item = $(this);
-      var $list = $item.closest('.rank-list.chips.board');
-      
-      console.log('List ID:', $list.attr('id'));
-      console.log('Removing item:', $item.text().trim());
-      
-      $item.remove();
-      pushState($list);
-      
-      return false;
-    });
-  
+    
+    function ensureRemoveButtons(){
+      document.querySelectorAll('.rank-list.chips.board .rank-list-item').forEach(function(item){
+        if (!item.querySelector('.chip-remove')) {
+          var b = document.createElement('span');
+          b.className = 'chip-remove';
+          item.appendChild(b);
+        }
+      });
+    }
+    
+    ensureRemoveButtons();
+    const obsButtons = new MutationObserver(function(){ ensureRemoveButtons(); });
+    obsButtons.observe(document.body, {subtree:true, childList:true});
+    
     const obs = new MutationObserver(function(muts){
       muts.forEach(function(m){
         if (m.type === 'childList') {
           var list = m.target.closest('.rank-list.chips.board');
           if (list && list.id) {
-            pushState($(list));
+              setTimeout(function(){ pushState($(list)); }, 0); 
+              //pushState($list);
           }
         }
       });
     });
+    
+    obs.observe(document.body, {subtree:true, childList:true});
 
   })();
   ")),
-    
-    tags$style(HTML("
+        
+        tags$style(HTML("
     .rank-list.chips.board .rank-list-item{ cursor:pointer; }
+    .rank-list .rank-list-item { position: relative; }
+    .rank-list .chip-remove{
+      position:absolute; top:-6px; right:-6px;
+      width:18px; height:18px; border-radius:50%;
+      border:1px solid #e5e7eb; background:#fff;
+      font-size:12px; line-height:16px; text-align:center;
+      cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.08);
+    }
+    .rank-list .chip-remove::after { content:'×'; }
+
   "))
-    
-  )
+        
+  ))
 }
 
 # At bottom of ui_weather.R
 weather_tab_ui <- function() {
   page_fillable(
     theme = bs_theme(version = 5, primary = "#1f334a"),
+  
     trip_tab_ui("trip")
   )
 }
