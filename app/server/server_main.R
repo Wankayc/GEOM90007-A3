@@ -14,7 +14,8 @@ server <- function(input, output, session) {
       shopping = 0,
       health_services = 0
     ),
-    current_personality = "Melbourne Explorer"
+    current_personality = "Melbourne Explorer",
+    first_load = TRUE
   )
   
   # Show app content when data is loaded
