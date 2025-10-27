@@ -177,6 +177,11 @@ trip_tab_server <- function(id) {
       v
     }
     
+    is_outdoor_present <- function(labels){
+      if (length(labels) == 0) return(FALSE)
+      any(to_keys(labels) %in% outdoor_keys)
+    }
+    
     day_badges <- function(row){
       if (nrow(row)==0) return(NULL)
       wx <- row
@@ -246,16 +251,6 @@ trip_tab_server <- function(id) {
                        ))
               ),
               span(class="cap","PM2.5 / PM10")
-          ),
-          
-          # Noise
-          div(class="chip stack",
-              div(class="row1",
-                  span(class="ico", noise_ico),
-                  span(class="val", if(is.na(wx$noise_mean)) "–" else sprintf("%.0f", wx$noise_mean)),
-                  span(class="unit","dB")
-              ),
-              span(class="cap","Noise")
           )
       )
     }
@@ -362,7 +357,7 @@ trip_tab_server <- function(id) {
                       span(weather_label(r$rain, r$tmax))
                   ),
                   
-                  div(class="chips",
+                  div(class="chips summary-metrics",
                       # Temp
                       div(class="chip stack",
                           div(class="row1",
@@ -413,15 +408,6 @@ trip_tab_server <- function(id) {
                               )
                           ),
                           span(class="cap","PM2.5 / PM10")
-                      ),
-                      # Noise
-                      div(class="chip stack",
-                          div(class="row1",
-                              span(class="ico", if(is.na(r$noise_mean)) "🔇" else if(r$noise_mean<=55) "🔉" else if(r$noise_mean<=70) "🔊" else "📢"),
-                              span(class="val", if(is.na(r$noise_mean)) "–" else sprintf("%.0f", r$noise_mean)),
-                              span(class="unit","dB")
-                          ),
-                          span(class="cap","Noise")
                       )
                   )
               )

@@ -3,46 +3,58 @@
 trip_tab_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    h2("Trip-Weather Planner"),
-    fluidRow(
-      column(
-        width = 4, class = "d-flex justify-content-center",  
-        div(class = "card p-3",
-            airDatepickerInput(
-              inputId = ns("range"),
-              label = NULL,
-              value = NULL,
-              minDate = as.Date("2024-09-01"),
-              maxDate = as.Date("2025-10-31"),
-              range = TRUE, inline = TRUE, autoClose = TRUE,
-              width = "100%"
-            )
-        )
-      ),
-      column(
-        width = 8,
-        div(class = "card p-3",
-            uiOutput(ns("range_summary"))
-        )
-      )
-    ),
-    
-    br(),
-    
-    div(class = "card p-3",
-        tags$small(class="text-muted d-block mb-2","Drag options into each date box"),
+    div(class = "page-wrap",                    
+        h2("Trip-Weather Planner"),             
+        p(style='color:#666; font-size:14px; margin-bottom:16px; line-height:1.6;',
+          "Click on any date range below to explore weather conditions and plan your trip activities. ",
+          "Data sources: ",
+          tags$a("Melbourne Open Data Portal",
+                 href="https://data.gov.au/data/dataset/microclimate-sensors-data",
+                 target="_blank", style="color:#036B55;"),
+          " and ",
+          tags$a("Australian Bureau of Meteorology",
+                 href="https://www.bom.gov.au/jsp/ncc/cdio/calendar/climate-calendar?stn_num=086338&month=10&day=14",
+                 target="_blank", style="color:#036B55;")
+        ),
         fluidRow(
-          column(6, h5("Outdoor activities"), uiOutput(ns("outdoor_list"))),
-          column(6, h5("Indoor activities"),  uiOutput(ns("indoor_list")))
-        )
-    ),
-    
-    div(class = "card p-3",
-        h4("Activity Planner"),
-        uiOutput(ns("itinerary_boards"))
-    ),
-    
-    tags$style(HTML("
+          column(
+            width = 4, class = "d-flex justify-content-center",  
+            div(class = "card p-3", 
+                airDatepickerInput(
+                  inputId = ns("range"),
+                  label = NULL,
+                  value = NULL,
+                  minDate = as.Date("2024-09-01"),
+                  maxDate = as.Date("2025-10-31"),
+                  range = TRUE, inline = TRUE, autoClose = TRUE,
+                  width = "100%"
+                )
+            )
+          ),
+          column(
+            width = 8,
+            div(class = "card p-3",
+                uiOutput(ns("range_summary"))
+            )
+          )
+        ),
+        
+        br(),
+        
+        div(class = "card p-3",
+            tags$small(class="text-muted d-block mb-2","Drag options into each date box"),
+            fluidRow(
+              column(6, h5("Outdoor activities"), uiOutput(ns("outdoor_list"))),
+              column(6, h5("Indoor activities"),  uiOutput(ns("indoor_list")))
+            )
+        ),
+        
+        div(class = "card p-3",
+            h4("Activity Planner"),
+            uiOutput(ns("itinerary_boards"))
+        ),
+        
+        tags$style(HTML("
       /* cards: minimal design */
       .card { border:1px solid #e5e7eb; border-radius:14px; box-shadow:none; }
       
@@ -122,8 +134,8 @@ trip_tab_ui <- function(id) {
       .wx-ico  { font-size:1.05rem; line-height:1; }
       
       .temp-cell .mean { font-weight:800; }
-      .temp-cell .min  { color:#2563eb; font-weight:600; }  // blue
-      .temp-cell .max  { color:#ef4444; font-weight:600; }  // red
+      .temp-cell .min  { color:#2563eb; font-weight:600; }  /*blue*/
+      .temp-cell .max  { color:#ef4444; font-weight:600; }  /*red*/
       
       .pm-badge{ display:inline-flex; align-items:center; gap:.35rem; }
       
@@ -175,21 +187,21 @@ trip_tab_ui <- function(id) {
       .row-card .chips{ display:flex; flex-wrap:wrap; gap:8px; }
 
     ")),
-    
-    tags$style(HTML("
+        
+        tags$style(HTML("
       .summary-list .row-card { padding:14px 16px; } 
-      .summary-list .date { font-size:1.0rem; }
-      .summary-list .wx { font-size:1.15rem; }
-      .summary-list .wx span:first-child { font-size:1.35rem; line-height:1; }
+      .summary-list .date { font-size:1.7rem; }
+      .summary-list .wx { font-size:1.7rem; }
+      .summary-list .wx span:first-child { font-size:1.7rem; line-height:1; }
     
       .summary-metrics .chip { padding:8px 12px; } 
-      .summary-metrics .chip .ico  { font-size:1.20rem; } 
-      .summary-metrics .chip .val  { font-size:0.90rem; font-weight:700; } 
-      .summary-metrics .chip .unit { font-size:.70rem; }        
-      .summary-metrics .chip .cap  { font-size:.60rem; }      
+      .summary-metrics .chip .ico  { font-size:1.4rem; } 
+      .summary-metrics .chip .val  { font-size:1.4rem; font-weight:700; } 
+      .summary-metrics .chip .unit { font-size:1.0rem; }        
+      .summary-metrics .chip .cap  { font-size:1.0rem; }      
     ")),
-    
-    tags$script(HTML("
+        
+        tags$script(HTML("
       (function(){
         function decorate(map){
           if(!map) return;
@@ -210,8 +222,8 @@ trip_tab_ui <- function(id) {
         obs.observe(document.body, {subtree:true, childList:true});
       })();
     ")),
-    
-    tags$script(HTML("
+        
+        tags$script(HTML("
     (function(){
       function esc(id){ return '#'+id.replace(/([:\\.\\[\\],])/g, '\\\\$1'); }
   
@@ -276,9 +288,9 @@ trip_tab_ui <- function(id) {
       });
     })();
   ")),
-    
-    
-    tags$script(HTML("
+        
+        
+        tags$script(HTML("
   (function(){
     //debug
     //console.log('Activity planner loaded');
@@ -364,8 +376,8 @@ trip_tab_ui <- function(id) {
 
   })();
   ")),
-    
-    tags$style(HTML("
+        
+        tags$style(HTML("
     .rank-list.chips.board .rank-list-item{ cursor:pointer; }
     .rank-list .rank-list-item { position: relative; }
     .rank-list .chip-remove{
@@ -378,14 +390,15 @@ trip_tab_ui <- function(id) {
     .rank-list .chip-remove::after { content:'×'; }
 
   "))
-    
-  )
+        
+  ))
 }
 
 # At bottom of ui_weather.R
 weather_tab_ui <- function() {
   page_fillable(
     theme = bs_theme(version = 5, primary = "#1f334a"),
+  
     trip_tab_ui("trip")
   )
 }
