@@ -1,48 +1,103 @@
 # ============================================================================
-# server/server_map.R - Map Tab Server Logic
-# Complete implementation with all features
+# server/server_map.R - Map Tab Server Logic (NO INFO WINDOWS)
+# CSV 為主；搜尋/篩選/畫路徑；完全移除所有視窗/tooltip 相關功能
 # ============================================================================
 
-# Toggle places button
-observeEvent(input$toggle_places, {
-  if(length(input$place_types) > 0) {
-    updateAwesomeCheckboxGroup(session, "place_types", selected = character(0))
-  } else {
-    updateAwesomeCheckboxGroup(session, "place_types", selected = c("cafe", "restaurant", "park", "toilet", "bbq", "bar", "shopping"))
+# ---------- Helper: Operating Hours Filter -----------------------------------
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+filter_by_operating_hours_csv <- function(df) {
+  if (is.null(df) || !nrow(df)) return(df)
+  if (!("opening_time" %in% names(df)) || !("closing_time" %in% names(df))) return(df)
+  
+  # 确保能访问到 input - 使用 time_filter (UI中的实际ID)
+  range <- tryCatch({
+    input$time_filter %||% c(0, 24)
+  }, error = function(e) {
+    c(0, 24)
+  })
+  
+  include_unknown <- tryCatch({
+    isTRUE(input$include_unknown_hours)
+  }, error = function(e) {
+    TRUE
+  })
+  
+  cat("📊 Filtering by hours:", range[1], "-", range[2], "\n")
+  cat("📊 Include unknown:", include_unknown, "\n")
+  
+  # 將 "HH:MM" 轉為「分鐘」(integer)，例如 "8:30" → 510
+  to_minutes <- function(x) {
+    if (is.na(x) || !nzchar(x)) return(NA_real_)
+    parts <- strsplit(trimws(x), ":")[[1]]
+    h <- as.numeric(parts[1])
+    m <- ifelse(length(parts) > 1, as.numeric(parts[2]), 0)
+    h * 60 + m
   }
-})
-
-# Update location choices
-observe({
-  locations <- c("Flinders Street Station", "Southern Cross Station", "Melbourne Central")
   
-  updatePickerInput(
-    session, 
-    "start_location",
-    choices = locations,
-    selected = "Flinders Street Station"
-  )
+  # 使用者輸入的篩選區間轉成分鐘
+  range_min <- as.integer(range[1] * 60)
+  range_max <- as.integer(range[2] * 60)
   
-  updatePickerInput(
-    session, 
-    "end_location",
-    choices = locations,
-    selected = "Southern Cross Station"
-  )
-}) # <<< FIX: This block was not closed correctly.
+  df$open_min <- sapply(df$opening_time, to_minutes)
+  df$close_min <- sapply(df$closing_time, to_minutes)
+  
+  keep <- logical(nrow(df))
+  for (i in seq_len(nrow(df))) {
+    o <- df$open_min[i]
+    c <- df$close_min[i]
+    
+    if (is.na(o) || is.na(c)) {
+      keep[i] <- include_unknown
+    } else if (c >= o) {
+      # 正常情況：開 < 關
+      keep[i] <- (range_max >= o) && (range_min <= c)
+  } else {
+      # 跨午夜（例如 22:00–02:00）
+      keep[i] <- (range_min <= c) || (range_max >= o)
+    }
+  }
+  
+  filtered <- df[keep, , drop = FALSE]
+  cat("📊 Filtered:", nrow(df), "→", nrow(filtered), "locations\n")
+  
+  filtered
+}
 
-# Initialize map state
+# ---------- Travel mode colors -----------------------------------------------
+
+MODE_COLORS <- list(
+  driving = "#2ca02c",    # Green
+  transit = "#1f77b4",    # Blue
+  walking = "#ff7f0e",    # Orange
+  bicycling = "#9467bd"   # Purple
+)
+
+# ---------- Map state --------------------------------------------------------
+
 map_rv <- reactiveValues(
   start = NULL,
   end = NULL,
-  picking_mode = NULL,
   search_results = NULL,
   route_summaries = list(),
-  default_places = NULL,
-  filtered_places = NULL
+  filtered_places = NULL,
+  all_locations = NULL,
+  selected_location = NULL,  # 存储用户点击的地点信息
+  current_display_data = NULL,  # 当前地图显示的原始数据（未经时间筛选）
+  display_source = NULL  # 数据来源: "category" / "wordcloud" / "search"
 )
 
-# ===== RENDER GOOGLE MAP =====
+# ---------- Render Google Map ------------------------------------------------
+
+# 可保留樣式（隱藏高速路圖標/POI），不影響功能
+style_json_string <- '[
+  {"featureType":"road.highway","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+  {"featureType":"road.arterial","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
+  {"featureType":"poi","stylers":[{"visibility":"on"}]},
+  {"featureType":"poi.business","stylers":[{"visibility":"om"}]}
+]'
+
 output$google_map <- renderGoogle_map({
   google_map(
     key = GOOGLE_MAPS_API_KEY,
@@ -50,122 +105,333 @@ output$google_map <- renderGoogle_map({
     zoom = 13,
     search_box = FALSE,
     libraries = "places",
-    event_return_type = "list"
+    event_return_type = "list",
+    map_type_control = FALSE,
+    styles = style_json_string
   )
 })
 
-# ===== BIND PLACES AUTOCOMPLETE =====
-observeEvent(input$google_map_bounds, {
-  session$sendCustomMessage('bindAutocomplete', list(
-    ids = c('start_input', 'end_input', 'search_text')
-  ))
-  
-  # Load default places after map is ready
-  Sys.sleep(0.5)
-  if (!is.null(map_rv$default_places)) {
-    load_default_places()
-  }
-}, once = TRUE)
+# ---------- Load CSV data on startup (DO NOT auto-display) ------------------
 
-# ===== TIME FILTER (RANGE SLIDER) =====
-observeEvent(input$time_filter, {
-  time_range <- input$time_filter
-  time_min <- time_range[1]
-  time_max <- time_range[2]
-  
-  if (!is.null(map_rv$default_places)) {
-    filtered <- map_rv$default_places %>%
-      filter(open_time <= time_max & close_time >= time_min)
-    
-    map_rv$filtered_places <- filtered
-    load_default_places()
-    
-    showNotification(
-      sprintf("Showing %d places open between %02d:00-%02d:00", 
-              nrow(filtered), time_min, time_max),
-      type = "message",
-      duration = 2
-    )
+observe({
+  if (is.null(map_rv$all_locations) && exists("theme_data")) {
+    map_rv$all_locations   <- theme_data
+    map_rv$filtered_places <- NULL  # ★ 不自动载入任何地点
+    cat("CSV Columns Loaded:\n"); print(names(map_rv$all_locations))
+    cat("Loaded", nrow(theme_data), "locations from CSV\n")
+    cat("⚠️ No markers displayed - waiting for user to select category\n")
   }
-})
+}, priority = 100)
 
-# ===== LOAD DEFAULT PLACES FUNCTION =====
-load_default_places <- function() {
-  places <- map_rv$filtered_places
+# ---------- Operating Hours Filter (auto refresh) ----------------------------
+
+observeEvent(list(input$time_filter, input$include_unknown_hours), {
+  cat("\n🕐 Hours filter changed:", input$time_filter[1], "-", input$time_filter[2], "\n")
+  cat("📍 Current display source:", map_rv$display_source, "\n")
   
-  if (is.null(places) || nrow(places) == 0) {
-    google_map_update('google_map') %>%
-      clear_markers(layer_id = 'default_places')
+  # ★ 如果没有当前显示的数据，不做任何操作
+  if (is.null(map_rv$current_display_data)) {
+    cat("⚠️ No data currently displayed, skipping filter\n")
     return()
   }
   
-  google_map_update('google_map') %>%
-    clear_markers(layer_id = 'default_places') %>%
+  # ★ 从当前显示的原始数据进行时间筛选
+  filtered_data <- filter_by_operating_hours_csv(map_rv$current_display_data)
+  
+  if (nrow(filtered_data) == 0) {
+    # 清除所有标记
+    google_map_update("google_map") %>%
+      clear_markers(layer_id = "csv_places") %>%
+      clear_markers(layer_id = "wordcloud_places") %>%
+      clear_markers(layer_id = "search_results")
+    
+    showNotification(
+      "No locations match the selected operating hours", 
+      type = "warning", 
+      duration = 3
+    )
+    return()
+  }
+  
+  # 根据数据来源使用不同的 layer_id
+  layer_id <- switch(
+    map_rv$display_source,
+    "wordcloud" = "wordcloud_places",
+    "search" = "search_results",
+    "category" = "csv_places",
+    "csv_places"  # 默认
+  )
+  
+  cat("🗺️ Displaying", nrow(filtered_data), "locations with layer:", layer_id, "\n")
+  
+  # 准备数据
+  display_data <- filtered_data %>%
+    dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
+    dplyr::mutate(
+      lat = as.numeric(Latitude),
+      lng = as.numeric(Longitude),
+      name = as.character(Name)
+    ) %>%
+    dplyr::select(name, lat, lng)
+  
+  # 清除旧标记并添加新标记
+  google_map_update("google_map") %>%
+    clear_markers(layer_id = "csv_places") %>%
+    clear_markers(layer_id = "wordcloud_places") %>%
+    clear_markers(layer_id = "search_results") %>%
     add_markers(
-      data = places,
-      lat = 'lat',
-      lon = 'lng',
-      info_window = 'name',
-      layer_id = 'default_places'
+      data = display_data,
+      lat = "lat",
+      lon = "lng",
+      id = "name",
+      layer_id = layer_id,
+      update_map_view = FALSE
+    )
+  
+  showNotification(
+    sprintf("Showing %d locations (after hours filter)", nrow(display_data)),
+    type = "message",
+    duration = 2
+  )
+}, ignoreInit = TRUE, ignoreNULL = FALSE)
+
+# ---------- Reset Map button -------------------------------------------------
+
+observeEvent(input$reset_map, {
+  cat("\n🔄 Resetting map...\n")
+  
+  # 清除所有标记层和路线
+  google_map_update("google_map") %>%
+    clear_markers(layer_id = "csv_places") %>%
+    clear_markers(layer_id = "wordcloud_places") %>%
+    clear_markers(layer_id = "search_results") %>%
+    clear_markers(layer_id = "route_markers") %>%
+    clear_polylines()
+  
+  # ★ 清空所有数据，不显示任何地点
+  map_rv$filtered_places <- NULL
+  map_rv$selected_location <- NULL
+  map_rv$current_display_data <- NULL
+  map_rv$display_source <- NULL
+  
+  # 重置类别选择为 "All Categories"
+  updateSelectInput(session, "category_filter", selected = "all")
+  
+  # 清空搜索框
+  updateTextInput(session, "search_text", value = "")
+  
+  cat("✓ Map cleared - no markers displayed\n")
+  
+  showNotification(
+    "✓ Map reset. Please select a category to display locations.", 
+    type = "message", 
+    duration = 3
+  )
+})
+
+# ---------- Marker Click Event (获取详细信息) --------------------------------
+
+observeEvent(input$google_map_marker_click, {
+  click_data <- input$google_map_marker_click
+  if (is.null(click_data)) return()
+  
+  cat("\n🖱️ Marker clicked:", click_data$id, "\n")
+  
+  # 从 all_locations 中查找该地点的完整信息
+  location_data <- map_rv$all_locations %>%
+    dplyr::filter(Name == click_data$id)
+  
+  if (nrow(location_data) == 0) {
+    showNotification("Location data not found", type = "error", duration = 3)
+    return()
+  }
+  
+  location <- location_data[1, ]
+  
+  # 保存选中的地点信息
+  map_rv$selected_location <- list(
+    name = as.character(location$Name),
+    lat = as.numeric(location$Latitude),
+    lng = as.numeric(location$Longitude),
+    rating = if("Google_Rating" %in% names(location)) as.character(location$Google_Rating) else "N/A",
+    opening = if("opening_time" %in% names(location)) as.character(location$opening_time) else "Unknown",
+    closing = if("closing_time" %in% names(location)) as.character(location$closing_time) else "Unknown",
+    theme = if("Theme" %in% names(location)) as.character(location$Theme) else "Unknown",
+    sub_theme = if("Sub_Theme" %in% names(location)) as.character(location$Sub_Theme) else "Unknown"
+  )
+  
+  cat("✓ Location selected:", map_rv$selected_location$name, "\n")
+  
+  # 显示通知 - 信息会在侧边栏显示
+    showNotification(
+    paste0("Selected: ", map_rv$selected_location$name),
+      type = "message",
+      duration = 2
+    )
+})
+
+# ---------- Set as Start Location --------------------------------------------
+
+observeEvent(input$set_as_start, {
+  if (is.null(map_rv$selected_location)) {
+    showNotification("Please click on a location on the map first", type = "warning", duration = 3)
+    return()
+  }
+  
+  # 使用选中的位置
+  map_rv$start <- c(
+    lat = map_rv$selected_location$lat,
+    lng = map_rv$selected_location$lng,
+    name = map_rv$selected_location$name
+  )
+  
+  updateTextInput(session, "start_input", value = as.character(map_rv$start["name"]))
+  draw_start_end_markers()
+  
+  showNotification(paste0("✓ Start location set to: ", map_rv$selected_location$name), 
+                   type = "message", duration = 3)
+})
+
+# ---------- Set as End Location ----------------------------------------------
+
+observeEvent(input$set_as_end, {
+  if (is.null(map_rv$selected_location)) {
+    showNotification("Please click on a location on the map first", type = "warning", duration = 3)
+    return()
+  }
+  
+  # 使用选中的位置
+  map_rv$end <- c(
+    lat = map_rv$selected_location$lat,
+    lng = map_rv$selected_location$lng,
+    name = map_rv$selected_location$name
+  )
+  
+  updateTextInput(session, "end_input", value = as.character(map_rv$end["name"]))
+  draw_start_end_markers()
+  
+  showNotification(paste0("✓ End location set to: ", map_rv$selected_location$name), 
+                   type = "message", duration = 3)
+})
+
+# ---------- Category filter ---------------------------------------------------
+
+observeEvent(input$category_filter, {
+  if (is.null(map_rv$all_locations)) return()
+  category <- input$category_filter
+  
+  # ★ 如果选择 "all"，清空地图，不显示任何地点
+  if (category == "all") {
+    google_map_update("google_map") %>%
+      clear_markers(layer_id = "csv_places")
+    
+    map_rv$filtered_places <- NULL
+    map_rv$selected_location <- NULL
+    map_rv$current_display_data <- NULL
+    map_rv$display_source <- NULL
+    
+    showNotification(
+      "Please select a specific category to view locations", 
+      type = "message", 
+      duration = 2
+    )
+    return()
+  }
+  
+  # 根据类别筛选
+  map_rv$filtered_places <- dplyr::filter(map_rv$all_locations, Theme == category)
+  
+  # ★ 设置当前显示的原始数据
+  map_rv$current_display_data <- map_rv$filtered_places
+  map_rv$display_source <- "category"
+  
+  # 清除选中的地点信息
+  map_rv$selected_location <- NULL
+  
+  cat("📂 Category filter: Set current_display_data to", nrow(map_rv$current_display_data), "locations\n")
+  
+  # 加载该类别的地点
+  load_csv_places()
+  
+  showNotification(
+    sprintf("Showing %d locations in %s", nrow(map_rv$filtered_places), category), 
+    type = "message", 
+    duration = 2
+  )
+}, ignoreInit = TRUE)
+
+# ---------- Load CSV places -> markers ---------------------------------------
+
+load_csv_places <- function() {
+  places <- map_rv$filtered_places
+  if (is.null(places) || nrow(places) == 0) {
+    google_map_update("google_map") %>% clear_markers(layer_id = "csv_places")
+    return()
+  }
+  
+  # Apply operating hours filter
+  places <- filter_by_operating_hours_csv(places)
+  
+  if (nrow(places) == 0) {
+    google_map_update("google_map") %>% clear_markers(layer_id = "csv_places")
+    showNotification("No locations match the selected operating hours", type = "warning", duration = 3)
+    return()
+  }
+  
+  places_clean <- places %>%
+    dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
+    dplyr::mutate(
+      lat  = as.numeric(Latitude),
+      lng  = as.numeric(Longitude),
+      name = as.character(Name)
+    ) %>%
+    dplyr::select(name, lat, lng)
+  
+  cat("Displaying", nrow(places_clean), "markers on map (after hours filter)\n")
+  
+  google_map_update("google_map") %>%
+    clear_markers(layer_id = "csv_places") %>%
+    add_markers(
+      data = places_clean,
+      lat = "lat",
+      lon = "lng",
+      id  = "name",
+      layer_id = "csv_places",
+      update_map_view = FALSE
+      # ★ 不预加载 info_window，等用户点击时再获取
     )
 }
 
-# ===== GEOLOCATION: MY LOCATION =====
+# ---------- Geolocation (My Location) ----------------------------------------
+
 observeEvent(input$start_my_location, {
   showNotification(
-    HTML("
-      <b>Location Permission Required</b><br>
-      <small>If denied: Use 'Pick on Map' or type address instead</small>
-    "),
-    type = "warning",
-    duration = 6,
-    id = "geo_warning"
+    HTML("<b>Location Permission Required</b><br><small>If denied: Use 'Pick on Map' or type address instead</small>"),
+    type = "warning", duration = 6, id = "geo_warning"
   )
-  
-  session$sendCustomMessage('requestGeolocation', 
-                            list(callback = 'start_geo_result'))
+  session$sendCustomMessage("requestGeolocation", list(callback = "start_geo_result"))
 })
 
 observeEvent(input$end_my_location, {
   showNotification(
-    HTML("
-      <b>Location Permission Required</b><br>
-      <small>If denied: Use 'Pick on Map' or type address instead</small>
-    "),
-    type = "warning",
-    duration = 6,
-    id = "geo_warning"
+    HTML("<b>Location Permission Required</b><br><small>If denied: Use 'Pick on Map' or type address instead</small>"),
+    type = "warning", duration = 6, id = "geo_warning"
   )
-  
-  session$sendCustomMessage('requestGeolocation', 
-                            list(callback = 'end_geo_result'))
+  session$sendCustomMessage("requestGeolocation", list(callback = "end_geo_result"))
 })
 
-# Handle geolocation results
 observeEvent(input$start_geo_result, {
   result <- input$start_geo_result
   removeNotification(id = "geo_warning")
-  
   if (!is.null(result$error)) {
     showNotification(
-      HTML(paste0(
-        "<b>Geolocation Failed</b><br>",
-        result$error, "<br>",
-        "<small>Use 'Pick on Map' instead</small>"
-      )),
-      type = "error",
-      duration = 6
+      HTML(paste0("<b>Geolocation Failed</b><br>", result$error, "<br><small>Use 'Pick on Map' instead</small>")),
+      type = "error", duration = 6
     )
     return()
   }
-  
-  map_rv$start <- c(
-    lat = result$lat, 
-    lng = result$lng, 
-    name = sprintf("My Location (%.4f, %.4f)", result$lat, result$lng)
-  )
-  
-  updateTextInput(session, 'start_input', value = map_rv$start['name'])
+  map_rv$start <- c(lat = result$lat, lng = result$lng, name = "My Current Location")
+  updateTextInput(session, "start_input", value = as.character(map_rv$start["name"]))
   draw_start_end_markers()
   showNotification("✓ Start location set", type = "message", duration = 2)
 })
@@ -173,321 +439,283 @@ observeEvent(input$start_geo_result, {
 observeEvent(input$end_geo_result, {
   result <- input$end_geo_result
   removeNotification(id = "geo_warning")
-  
   if (!is.null(result$error)) {
     showNotification(
-      HTML(paste0(
-        "<b>Geolocation Failed</b><br>",
-        result$error, "<br>",
-        "<small>Use 'Pick on Map' instead</small>"
-      )),
-      type = "error",
-      duration = 6
+      HTML(paste0("<b>Geolocation Failed</b><br>", result$error, "<br><small>Use 'Pick on Map' instead</small>")),
+      type = "error", duration = 6
     )
     return()
   }
-  
-  map_rv$end <- c(
-    lat = result$lat, 
-    lng = result$lng, 
-    name = sprintf("My Location (%.4f, %.4f)", result$lat, result$lng)
-  )
-  
-  updateTextInput(session, 'end_input', value = map_rv$end['name'])
+  map_rv$end <- c(lat = result$lat, lng = result$lng, name = "My Current Location")
+  updateTextInput(session, "end_input", value = as.character(map_rv$end["name"]))
   draw_start_end_markers()
   showNotification("✓ End location set", type = "message", duration = 2)
 })
 
-# ===== AUTOCOMPLETE SELECTION =====
-observeEvent(input$start_input_place, {
-  place <- input$start_input_place
-  if (is.null(place)) return()
-  
-  map_rv$start <- c(
-    lat = place$lat,
-    lng = place$lng,
-    name = place$name
-  )
-  draw_start_end_markers()
-  showNotification("Start location updated", type = "message", duration = 2)
-})
+# ---------- Draw start/end markers (no info window) --------------------------
 
-observeEvent(input$end_input_place, {
-  place <- input$end_input_place
-  if (is.null(place)) return()
-  
-  map_rv$end <- c(
-    lat = place$lat,
-    lng = place$lng,
-    name = place$name
-  )
-  draw_start_end_markers()
-  showNotification("End location updated", type = "message", duration = 2)
-})
-
-# ===== PICK ON MAP - COMPLETE IMPLEMENTATION =====
-
-# Start picking mode for START location
-observeEvent(input$start_pick_map, {
-  map_rv$picking_mode <- 'start'
-  
-  # Change cursor to crosshair
-  runjs("document.getElementById('google_map').style.cursor = 'crosshair';")
-  
-  showNotification(
-    HTML("<b>👆 Pick START Location</b><br>Click anywhere on the map"),
-    type = "message", 
-    duration = NULL,
-    closeButton = TRUE,
-    id = "picking_notification"
-  )
-})
-
-# Start picking mode for END location
-observeEvent(input$end_pick_map, {
-  map_rv$picking_mode <- 'end'
-  
-  # Change cursor to crosshair
-  runjs("document.getElementById('google_map').style.cursor = 'crosshair';")
-  
-  showNotification(
-    HTML("<b>👆 Pick END Location</b><br>Click anywhere on the map"),
-    type = "message", 
-    duration = NULL,
-    closeButton = TRUE,
-    id = "picking_notification"
-  )
-})
-
-# Handle map click events
-observeEvent(input$google_map_click, {
-  click <- input$google_map_click
-  
-  # Debug output
-  cat("Map clicked:", click$lat, click$lon, "\n")
-  
-  # Exit if not in picking mode
-  if (is.null(map_rv$picking_mode)) {
-    return()
-  }
-  
-  # Validate click data
-  if (is.null(click) || is.null(click$lat) || is.null(click$lon)) {
-    showNotification("Invalid click. Please try again.", type = "error")
-    return()
-  }
-  
-  # Create location data
-  location <- c(
-    lat = click$lat,
-    lng = click$lon,
-    name = sprintf("Selected (%.4f, %.4f)", click$lat, click$lon)
-  )
-  
-  # Set start or end based on picking mode
-  if (map_rv$picking_mode == 'start') {
-    map_rv$start <- location
-    updateTextInput(session, 'start_input', value = location['name'])
-    showNotification(
-      HTML(sprintf("<b>✓ Start Location Set</b><br>%s", location['name'])),
-      type = "message",
-      duration = 3
-    )
-  } else if (map_rv$picking_mode == 'end') {
-    map_rv$end <- location
-    updateTextInput(session, 'end_input', value = location['name'])
-    showNotification(
-      HTML(sprintf("<b>✓ End Location Set</b><br>%s", location['name'])),
-      type = "message",
-      duration = 3
-    )
-  }
-  
-  # Reset cursor
-  runjs("document.getElementById('google_map').style.cursor = 'default';")
-  
-  # Clear picking mode
-  map_rv$picking_mode <- NULL
-  removeNotification(id = "picking_notification")
-  
-  # Update markers
-  draw_start_end_markers()
-}, ignoreNULL = FALSE, ignoreInit = TRUE)
-
-# ===== DRAW START/END MARKERS =====
 draw_start_end_markers <- function() {
-  google_map_update('google_map') %>%
-    clear_markers(layer_id = 'route_markers') %>%
-    {
-      map_obj <- .
+  map_update <- google_map_update("google_map") %>% clear_markers(layer_id = "route_markers")
       
       if (!is.null(map_rv$start)) {
-        map_obj <- add_markers(
-          map_obj,
+    map_update <- add_markers(
+      map_update,
           data = data.frame(
-            lat = as.numeric(map_rv$start['lat']),
-            lng = as.numeric(map_rv$start['lng'])
-          ),
-          lat = 'lat',
-          lon = 'lng',
-          info_window = map_rv$start['name'],
-          marker_icon = list(
-            url = "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
-          ),
-          layer_id = 'route_markers'
+        lat  = as.numeric(map_rv$start["lat"]),
+        lng  = as.numeric(map_rv$start["lng"])
+      ),
+      lat = "lat", lon = "lng",
+      marker_icon = list(url = "https://maps.google.com/mapfiles/ms/icons/green-dot.png"),
+      layer_id = "route_markers", update_map_view = FALSE
         )
       }
       
       if (!is.null(map_rv$end)) {
-        map_obj <- add_markers(
-          map_obj,
+    map_update <- add_markers(
+      map_update,
           data = data.frame(
-            lat = as.numeric(map_rv$end['lat']),
-            lng = as.numeric(map_rv$end['lng'])
-          ),
-          lat = 'lat',
-          lon = 'lng',
-          info_window = map_rv$end['name'],
-          marker_icon = list(
-            url = "https://maps.google.com/mapfiles/ms/icons/red-dot.png"
-          ),
-          layer_id = 'route_markers'
-        )
-      }
-      
-      map_obj
-    }
+        lat  = as.numeric(map_rv$end["lat"]),
+        lng  = as.numeric(map_rv$end["lng"])
+      ),
+      lat = "lat", lon = "lng",
+      marker_icon = list(url = "https://maps.google.com/mapfiles/ms/icons/red-dot.png"),
+      layer_id = "route_markers", update_map_view = FALSE
+    )
+  }
+  
+  map_update
 }
 
-# ===== PLACES SEARCH =====
+# ---------- CSV search (by name/theme/subtheme) ------------------------------
+
 observeEvent(input$search_places, {
   req(input$search_text)
+  search_term <- tolower(trimws(input$search_text))
+  if (is.null(map_rv$all_locations) || !nzchar(search_term)) return()
   
-  center <- if (!is.null(map_rv$start)) {
-    c(as.numeric(map_rv$start['lat']), as.numeric(map_rv$start['lng']))
-  } else {
-    c(-37.8136, 144.9631)
-  }
+  # ★ 获取原始搜索结果（未经时间筛选的）
+  search_results_raw <- map_rv$all_locations %>%
+    dplyr::filter(!is.na(Latitude) & !is.na(Longitude) &
+                    (grepl(search_term, tolower(Name),       fixed = TRUE) |
+                       grepl(search_term, tolower(Sub_Theme),  fixed = TRUE) |
+                       grepl(search_term, tolower(Theme),      fixed = TRUE)))
   
-  result <- try(
-    google_places(
-      search_string = input$search_text,
-      location = center,
-      radius = 1500,
-      key = GOOGLE_MAPS_API_KEY,
-      language = 'en'
-    ),
-    silent = TRUE
-  )
-  
-  if (inherits(result, 'try-error')) {
-    showNotification("Search failed. Please try again.", type = "error")
+  if (nrow(search_results_raw) == 0) {
+    showNotification("No matching locations found", type = "warning", duration = 3)
     return()
   }
   
-  if (is.null(result$results) || nrow(result$results) == 0) {
-    showNotification("No results found", type = "warning")
+  # ★ 保存原始搜索结果，用于后续时间筛选
+  map_rv$current_display_data <- search_results_raw
+  map_rv$display_source <- "search"
+  
+  cat("🔍 Search: Set current_display_data to", nrow(map_rv$current_display_data), "locations\n")
+  
+  # Apply operating hours filter
+  search_results <- filter_by_operating_hours_csv(search_results_raw)
+  
+  if (nrow(search_results) == 0) {
+    showNotification("No matching locations found (check operating hours filter)", type = "warning", duration = 3)
     return()
   }
   
-  places_df <- result$results %>%
-    mutate(
-      lat = geometry$location$lat,
-      lng = geometry$location$lng,
-      name = as.character(name)
+  search_results <- search_results %>%
+    dplyr::mutate(
+      lat  = as.numeric(Latitude),
+      lng  = as.numeric(Longitude),
+      name = as.character(Name)
     ) %>%
-    select(name, place_id, lat, lng) %>%
-    head(15)
+    dplyr::slice_head(n = 50) %>%
+    dplyr::select(name, lat, lng)
   
-  map_rv$search_results <- places_df
+  map_rv$search_results <- search_results
   
-  google_map_update('google_map') %>%
-    clear_markers(layer_id = 'search_results') %>%
+  google_map_update("google_map") %>%
+    clear_markers(layer_id = "search_results") %>%
     add_markers(
-      data = places_df,
-      lat = 'lat',
-      lon = 'lng',
-      info_window = 'name',
-      layer_id = 'search_results'
+      data = search_results,
+      lat = "lat", lon = "lng",
+      id  = "name",
+      layer_id = "search_results",
+      marker_icon = list(url = "https://maps.google.com/mapfiles/ms/icons/blue-dot.png")
+      # 不预加载 info window
     )
   
-  showNotification(sprintf("Found %d places", nrow(places_df)), type = "message")
+  showNotification(sprintf("Found %d matching locations (after hours filter)", nrow(search_results)), type = "message", duration = 3)
 })
 
-# ===== CALCULATE ROUTES =====
-observeEvent(input$get_directions, {
-  req(map_rv$start, map_rv$end)
+# ---------- Wordcloud -> show locations (no window) --------------------------
+
+observeEvent(map_refresh_trigger(), {
+  sub_theme <- selected_sub_theme_for_map()
+  if (is.null(sub_theme) || sub_theme == "") return()
   
-  google_map_update('google_map') %>%
-    clear_polylines()
+  if (!exists("theme_data")) {
+    showNotification("Data not loaded", type = "error", duration = 3)
+    return()
+  }
+  
+  top_places_data <- NULL
+  if (exists("top_places_for_map") && is.function(top_places_for_map)) {
+    top_places_data <- top_places_for_map()
+  }
+  
+  # ★ 获取原始数据（未经时间筛选的）
+  places_raw <- if (!is.null(top_places_data) && nrow(top_places_data) > 0) {
+    top_places_data
+  } else {
+    dplyr::filter(theme_data, Sub_Theme == sub_theme)
+  }
+  
+  # ★ 保存原始数据，用于后续时间筛选
+  map_rv$current_display_data <- places_raw
+  map_rv$display_source <- "wordcloud"
+  
+  cat("☁️ Wordcloud: Set current_display_data to", nrow(map_rv$current_display_data), "locations\n")
+  
+  # Apply operating hours filter
+  places <- filter_by_operating_hours_csv(places_raw)
+  
+  if (nrow(places) == 0) {
+    showNotification(paste0("No locations found for: ", sub_theme, " (check operating hours filter)"), type = "warning", duration = 3)
+    return()
+  }
+  
+  places <- places %>%
+    dplyr::filter(!is.na(Latitude) & !is.na(Longitude)) %>%
+    dplyr::mutate(
+      lat  = as.numeric(Latitude),
+      lng  = as.numeric(Longitude),
+      name = as.character(Name)
+    ) %>%
+    dplyr::select(name, lat, lng)
+  
+  google_map_update("google_map") %>%
+    clear_markers(layer_id = "wordcloud_places") %>%
+    add_markers(
+      data = places,
+      lat = "lat", lon = "lng",
+      id  = "name",
+      layer_id = "wordcloud_places",
+      update_map_view = FALSE
+      # 不预加载 info window
+    )
+  
+  # Update filtered_places for consistent state
+  map_rv$filtered_places <- places_raw
+  
+  showNotification(paste0("✓ Showing ", nrow(places), " places: ", sub_theme, " (after hours filter)"), type = "message", duration = 3)
+}, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+# ---------- Directions -------------------------------------------------------
+
+observeEvent(input$get_directions, {
+  cat("\n===== GET DIRECTIONS CLICKED =====\n")
+  
+  if (is.null(map_rv$start) || is.null(map_rv$end)) {
+    showNotification(
+      HTML("<b>Missing Location</b><br>Please set both start and end locations"),
+      type = "error", duration = 4
+    )
+    return()
+  }
+  
+  # 简化的 API key 检查：只检查是否为空，不检查特定值
+  if (is.null(GOOGLE_MAPS_API_KEY) || GOOGLE_MAPS_API_KEY == "") {
+    showNotification(
+      HTML("<b>API Key Error</b><br>Google Maps API key is not configured properly"),
+      type = "error", duration = 6
+    )
+    cat("❌ API Key is missing or empty\n")
+    return()
+  }
+  
+  cat("🔑 Using API Key (first 20 chars):", substr(GOOGLE_MAPS_API_KEY, 1, 20), "...\n")
+  
+  google_map_update("google_map") %>% clear_polylines()
   
   modes <- input$travel_modes
-  if (length(modes) == 0) modes <- 'driving'
+  if (length(modes) == 0) modes <- "driving"
+  cat("Selected travel modes:", paste(modes, collapse = ", "), "\n")
   
   route_summaries <- list()
+  errors <- list()
   
   for (mode in modes) {
+    cat("\nCalculating route for mode:", mode, "\n")
     direction <- try(
       google_directions(
-        origin = c(as.numeric(map_rv$start['lat']), 
-                   as.numeric(map_rv$start['lng'])),
-        destination = c(as.numeric(map_rv$end['lat']), 
-                        as.numeric(map_rv$end['lng'])),
-        mode = mode,
-        key = GOOGLE_MAPS_API_KEY,
-        simplify = TRUE
+        origin      = c(as.numeric(map_rv$start["lat"]), as.numeric(map_rv$start["lng"])),
+        destination = c(as.numeric(map_rv$end["lat"]),   as.numeric(map_rv$end["lng"])),
+        mode = mode, key = GOOGLE_MAPS_API_KEY, simplify = TRUE
       ),
       silent = TRUE
     )
     
-    if (inherits(direction, 'try-error') || 
-        is.null(direction$routes) || 
-        length(direction$routes) == 0) {
+    if (inherits(direction, "try-error")) {
+      error_msg <- as.character(direction)
+      cat("ERROR for", mode, ":", error_msg, "\n")
+      errors[[mode]] <- error_msg
+      next
+    }
+    
+    if (is.null(direction$routes) || length(direction$routes) == 0) {
+      cat("No routes found for", mode, "\n")
+      errors[[mode]] <- "No routes available"
       next
     }
     
     polyline <- direction$routes$overview_polyline$points
-    
-    google_map_update('google_map') %>%
+    google_map_update("google_map") %>%
       add_polylines(
         polyline = polyline,
         stroke_weight = 5,
         stroke_colour = MODE_COLORS[[mode]],
         stroke_opacity = 0.8,
-        layer_id = paste0('route_', mode)
+        layer_id = paste0("route_", mode)
       )
     
     legs <- direction$routes$legs
     if (!is.null(legs) && length(legs) > 0) {
-      leg <- legs[[1]][[1]]
-      route_summaries[[mode]] <- list(
-        distance_km = round(as.numeric(leg$distance$value) / 1000, 1),
-        duration_min = round(as.numeric(leg$duration$value) / 60)
-      )
+      # legs[[1]] is a data.frame, not a nested list
+      leg <- legs[[1]]
+      
+      # Extract distance and duration values
+      distance_value <- tryCatch(as.numeric(leg$distance$value), error = function(e) NA)
+      duration_value <- tryCatch(as.numeric(leg$duration$value), error = function(e) NA)
+      
+      if (!is.na(distance_value) && !is.na(duration_value)) {
+        route_summaries[[mode]] <- list(
+          distance_km  = round(distance_value / 1000, 1),
+          duration_min = round(duration_value / 60)
+        )
+        cat("✓ Route summary for", mode, ":", route_summaries[[mode]]$distance_km, "km,",
+            route_summaries[[mode]]$duration_min, "min\n")
+      } else {
+        cat("⚠️  Could not extract distance/duration for", mode, "\n")
+      }
     }
   }
   
   map_rv$route_summaries <- route_summaries
   
   if (length(route_summaries) > 0) {
-    showNotification(
-      sprintf("✓ Calculated %d route(s)", length(route_summaries)),
-      type = "message",
-      duration = 3
-    )
+    showNotification(sprintf("✓ Calculated %d route(s)", length(route_summaries)), type = "message", duration = 3)
   } else {
+    error_details <- if (length(errors) > 0) paste("<br><small>", names(errors)[1], ":", errors[[1]], "</small>") else ""
     showNotification(
-      "❌ No routes found. Check your locations.",
-      type = "error",
-      duration = 5
+      HTML(paste0("<b>❌ No routes found</b><br>Please check your API key and locations", error_details)),
+      type = "error", duration = 8
     )
   }
-})
+  
+  cat("===== GET DIRECTIONS COMPLETE =====\n\n")
+}, ignoreInit = TRUE)
 
-# ===== ROUTE SUMMARY OUTPUT =====
+# ---------- Route summary text -----------------------------------------------
+
 output$route_summary_text <- renderUI({
   summaries <- map_rv$route_summaries
-  
   if (length(summaries) == 0) {
     return(HTML('<span style="color:#999; font-size: 12px;">Set start & end, then click "Get Directions"</span>'))
   }
@@ -503,108 +731,98 @@ output$route_summary_text <- renderUI({
       mode
     )
     glue::glue(
-      '<div style="margin: 5px 0; font-size: 13px;">',
-      '<b>{mode_label}</b><br>',
-      '{info$distance_km} km · {info$duration_min} min',
-      '</div>'
+      '<div style="margin: 5px 0; font-size: 13px;">
+         <b>{mode_label}</b><br>{info$distance_km} km · {info$duration_min} min
+       </div>'
     )
   })
   
-  HTML(paste(summary_html, collapse = ''))
+  HTML(paste(summary_html, collapse = ""))
 })
 
-# ===== MAP LAYERS TOGGLE =====
-observeEvent(input$map_layers, {
-  if (length(input$map_layers) > 0) {
-    showNotification(
-      sprintf("Layers: %s", paste(input$map_layers, collapse = ", ")),
-      type = "message",
-      duration = 2
-    )
-  }
+# ---------- Location count (small card) --------------------------------------
+
+output$location_count <- renderUI({
+  count <- if (!is.null(map_rv$filtered_places)) nrow(map_rv$filtered_places) else 0
+  
+  # 根据数量选择不同的颜色和提示
+  color <- if (count == 0) "#999" else "#007bff"
+  message <- if (count == 0) "No locations displayed" else "locations displayed"
+  
+  HTML(sprintf(
+    '<div style="padding: 10px; background: #f8f9fa; border-radius: 5px; margin-top: 10px; text-align: center;">
+       <strong style="font-size: 16px; color: %s;">%d</strong>
+       <br><small style="color: #666;">%s</small>
+     </div>', color, count, message))
 })
 
-# ===== new here! =====
-observeEvent(selected_sub_theme_for_map(), {
-  sub_theme <- selected_sub_theme_for_map()
-  
-  # debug
-  cat("\n========== MAP DEBUG ==========\n")
-  cat("Received sub_theme:", sub_theme, "\n")
-  
-  if (is.null(sub_theme) || sub_theme == "") {
-    cat("sub_theme is NULL or empty, returning\n")
-    return()
+# ---------- Selected Location Info Card --------------------------------------
+
+output$selected_location_card <- renderUI({
+  if (is.null(map_rv$selected_location)) {
+    return(NULL)  # 没有选中地点时不显示
   }
   
-  # check if theme_data exists
-  if (!exists("theme_data")) {
-    cat("ERROR: theme_data not found!\n")
-    showNotification("Data not loaded", type = "error", duration = 3)
-    return()
-  }
+  loc <- map_rv$selected_location
   
-  cat("theme_data rows:", nrow(theme_data), "\n")
-  cat("Available Sub_Themes:", unique(theme_data$Sub_Theme)[1:5], "...\n")
-  
-  # filter sub_theme from theme
-  places <- theme_data %>%
-    filter(Sub_Theme == sub_theme) %>%
-    filter(!is.na(Latitude) & !is.na(Longitude)) %>%
-    mutate(
-      lat = as.numeric(Latitude),
-      lng = as.numeric(Longitude),
-      name = as.character(Name),
-      rating = as.numeric(Google_Rating),
-      address = as.character(ifelse(!is.na(Business_address), Business_address, "")),
-      # info_window
-      info_text = paste0(
-        "<b>", name, "</b><br>",
-        ifelse(!is.na(rating) & rating > 0, 
-               paste0("⭐ Rating: ", sprintf("%.1f", rating), "<br>"), 
-               ""),
-        ifelse(nchar(address) > 0, address, "")
-      )
-    ) %>%
-    select(name, lat, lng, rating, address, info_text)
-  
-  cat("Found", nrow(places), "places\n")
-  
-  if (nrow(places) == 0) {
-    cat("No places found for:", sub_theme, "\n")
-    cat("===============================\n\n")
-    showNotification(
-      paste0("No locations found for: ", sub_theme),
-      type = "warning",
-      duration = 3
+  # 构建卡片内容
+  div(
+    style = "margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); color: white;",
+    
+    # 标题
+    h5(
+      style = "margin: 0 0 10px 0; font-weight: bold; font-size: 16px;",
+      icon("map-marker-alt"), " Selected Location"
+    ),
+    
+    # 地点名称
+    div(
+      style = "font-size: 15px; font-weight: 600; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.3);",
+      loc$name
+    ),
+    
+    # 详细信息
+    div(
+      style = "font-size: 13px; line-height: 1.8;",
+      
+      # Category
+      div(
+        style = "margin-bottom: 6px;",
+        icon("tag"), " ",
+        tags$strong("Category: "), loc$theme
+      ),
+      
+      # Type
+      div(
+        style = "margin-bottom: 6px;",
+        icon("info-circle"), " ",
+        tags$strong("Type: "), loc$sub_theme
+      ),
+      
+      # Rating
+      if (loc$rating != "N/A" && loc$rating != "NA") {
+        div(
+          style = "margin-bottom: 6px;",
+          icon("star"), " ",
+          tags$strong("Rating: "), loc$rating
+        )
+      },
+      
+      # Operating Hours
+      if (loc$opening != "Unknown") {
+        div(
+          style = "margin-bottom: 6px;",
+          icon("clock"), " ",
+          tags$strong("Hours: "), 
+          paste0(loc$opening, " - ", loc$closing)
+        )
+      }
+    ),
+    
+    # 提示信息
+    div(
+      style = "margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 12px; font-style: italic; opacity: 0.9;",
+      icon("hand-point-down"), " Use buttons below to set as Start or End"
     )
-    return()
-  }
-  
-  cat("First 3 places:\n")
-  if (nrow(places) >= 1) cat("  -", places$name[1], "\n")
-  if (nrow(places) >= 2) cat("  -", places$name[2], "\n")
-  if (nrow(places) >= 3) cat("  -", places$name[3], "\n")
-  cat("===============================\n\n")
-  
-  # show locations on the map
-  google_map_update('google_map') %>%
-    clear_markers(layer_id = 'wordcloud_places') %>%
-    add_markers(
-      data = places,
-      lat = 'lat',
-      lon = 'lng',
-      info_window = 'info_text',
-      layer_id = 'wordcloud_places'
-    )
-  
-  # save to map_rv
-  map_rv$default_places <- places
-  map_rv$filtered_places <- places
-  
-  showNotification(
-    paste0("✓ Showing ", nrow(places), " places: ", sub_theme),
-    type = "message",
-    duration = 3
   )
-}, ignoreNULL = TRUE, ignoreInit = TRUE)
+})
