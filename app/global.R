@@ -30,8 +30,8 @@ barbecues <- read.csv(here('data', 'barbecues.csv'), stringsAsFactors = FALSE)
 
 clean_data <- function(df) {
   df %>%
-    rename_with(~gsub('\\s+', '_', .), everything()) %>%
-    rename_with(~gsub('\\.', '_', .), everything())
+    rename_with(~gsub('\\.', '_', .), everything()) %>%  # 先替换点号为下划线
+    rename_with(~gsub('\\s+', '_', .), everything())      # 再替换空格为下划线
 }
 
 landmarks <- clean_data(landmarks)
@@ -41,18 +41,22 @@ barbecues <- clean_data(barbecues)
 # merge data together
 theme_data <- bind_rows(
   landmarks %>%
-    select(Name, Latitude, Longitude, Theme, Sub_Theme, Google_Maps_Rating) %>%
+    select(Name, Latitude, Longitude, Theme, Sub_Theme, Google_Maps_Rating, opening_time, closing_time) %>%
     mutate(Google_Maps_Rating = as.character(Google_Maps_Rating),
            Business_address = NA_character_),
   cafe_restaurant %>%
-    select(Name, Latitude, Longitude, Theme, Sub_Theme, Google_Maps_Rating, Business_address) %>%
+    select(Name, Latitude, Longitude, Theme, Sub_Theme, Google_Maps_Rating, Business_address, opening_time, closing_time) %>%
     mutate(Google_Maps_Rating = as.character(Google_Maps_Rating)),
   barbecues %>%
-    select(Name, Latitude, Longitude, Theme, Sub_Theme) %>%
+    select(Name, Latitude, Longitude, Theme, Sub_Theme, opening_time, closing_time) %>%
     mutate(Google_Maps_Rating = NA_character_,
            Business_address = NA_character_)
 ) %>%
   mutate(Google_Rating = suppressWarnings(as.numeric(Google_Maps_Rating)))
+
+# Log loaded data
+cat("✓ Loaded theme_data with", nrow(theme_data), "locations\n")
+cat("✓ With operating hours:", sum(!is.na(theme_data$opening_time)), "\n")
 
 
 
