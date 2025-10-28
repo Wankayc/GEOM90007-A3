@@ -285,58 +285,6 @@ div(id = "summary-tab-content",
     div(
       class = "itinerary-section",
       h4("Your Recommended Itinerary"),
-      tags$table(
-        class = "itinerary-table",
-        tags$thead(
-          tags$tr(
-            tags$th(div(class = "weather-icon", icon("cloud-sun")), div(class = "day-date", "Monday"), div("24th Sep")),
-            tags$th(div(class = "weather-icon", icon("sun")), div(class = "day-date", "Tuesday"), div("25th Sep")),
-            tags$th(div(class = "weather-icon", icon("cloud-sun-rain")), div(class = "day-date", "Wednesday"), div("26th Sep")),
-            tags$th(div(class = "weather-icon", icon("cloud-sun")), div(class = "day-date", "Thursday"), div("27th Sep")),
-            tags$th(div(class = "weather-icon", icon("sun")), div(class = "day-date", "Friday"), div("28th Sep")),
-            tags$th(div(class = "weather-icon", icon("cloud-showers-heavy")), div(class = "day-date", "Saturday"), div("29th Sep")),
-            tags$th(div(class = "weather-icon", icon("cloud")), div(class = "day-date", "Sunday"), div("30th Sep"))
-          )
-        ),
-        tags$tbody(
-          tags$tr(
-            tags$td(
-              div(class = "event-title", "Brunetti Flinders Lane"), 
-              div(class = "event-time", "12:00 PM"),
-              div(class = "event-location", "Italian Cafe & Pastries")
-            ),
-            tags$td(
-              div(class = "event-title", "Victoria Park"), 
-              div(class = "event-time", "All Day"),
-              div(class = "event-location", "Barbecue & Picnic Spot")
-            ),
-            tags$td(
-              div(class = "event-title", "State Library Victoria"), 
-              div(class = "event-time", "10:00 AM - 4:00 PM"),
-              div(class = "event-location", "Historic Library & Exhibitions")
-            ),
-            tags$td(
-              div(class = "event-title", "Fitzroy Gardens"), 
-              div(class = "event-time", "All Day"),
-              div(class = "event-location", "Botanical Gardens")
-            ),
-            tags$td(
-              div(class = "event-title", "Italian Restaurant"), 
-              div(class = "event-time", "6:00 PM"),
-              div(class = "event-location", "Fine Dining Experience")
-            ),
-            tags$td(
-              div(class = "event-title", "Queen Victoria Market"), 
-              div(class = "event-time", "9:00 AM - 2:00 PM"),
-              div(class = "event-location", "Local Market & Food Stalls")
-            ),
-            tags$td(
-              div(class = "event-title", "Melbourne Museum"), 
-              div(class = "event-time", "10:00 AM - 5:00 PM"),
-              div(class = "event-location", "Cultural & Natural History")
-            )
-          )
-        )
-      )
+      uiOutput("itinerary_table")
     )
 )
