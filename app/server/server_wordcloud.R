@@ -5,6 +5,12 @@ current_sub_theme <- reactiveVal(NULL)
 # Create a reactive variable to share selected sub_theme with map module
 selected_sub_theme_for_map <- reactiveVal(NULL)
 
+# Create a reactive variable to store Top N ranking data for map
+top_places_for_map <- reactiveVal(NULL)
+
+# Create a trigger to force map refresh (increments on each "View on Map" click)
+map_refresh_trigger <- reactiveVal(0)
+
 observeEvent(input$nav, {
   runjs('dispatchEvent(new Event("resize"))')
 })
@@ -131,15 +137,34 @@ observeEvent(input$showMapBtn, {
     return()
   }
   
+  # Ensure top_places_for_map has data before switching to map
+  # (In case the ranking hasn't been rendered yet)
+  current_top_places <- top_places_for_map()
+  if (is.null(current_top_places) || nrow(current_top_places) == 0) {
+    # Generate the Top N data if not available
+    top_n_data <- theme_data %>%
+      filter(Sub_Theme == sub_theme) %>%
+      arrange(desc(Google_Rating)) %>%
+      head(as.numeric(input$topN))
+    
+    if (nrow(top_n_data) > 0) {
+      top_places_for_map(top_n_data)
+    }
+  }
+  
   # 先跳转到地图页面
   updateNavbarPage(session, 'nav', selected = 'Map')
   
   # 延迟更新，等地图加载完成
   shinyjs::delay(800, {
+    # Update the sub_theme for map
     selected_sub_theme_for_map(sub_theme)
     
+    # Increment trigger to force map refresh (even if sub_theme is the same)
+    map_refresh_trigger(map_refresh_trigger() + 1)
+    
     showNotification(
-      paste0("Loading locations for: ", sub_theme),
+      paste0("Loading Top ", input$topN, " locations for: ", sub_theme),
       type = "message",
       duration = 2
     )
@@ -191,6 +216,15 @@ output$plot_ranking <- renderGirafe({
     ungroup() %>%
     arrange(Google_Rating_Display) %>%
     mutate(Name_display = factor(Name_display, levels = Name_display))
+  
+  # Save the original data columns to top_places_for_map for map display
+  if (nrow(ranking_data) > 0) {
+    # Extract only the original theme_data columns (before all the display processing)
+    top_places_for_map(ranking_data %>% 
+      select(any_of(names(theme_data))))
+  } else {
+    top_places_for_map(NULL)
+  }
   
   if (nrow(ranking_data) == 0) {
     p <- ggplot() +
