@@ -108,18 +108,18 @@ div(id = "summary-tab-content",
       }
       #summary-tab-content .personality-card h3 {
         font-weight: 700;
-        margin: 0 0 8px 0;
-        color: #343a40;
-        font-size: 1.3rem;
+        margin: 0 0 10px 0;
+        color: #036B55;
+        font-size: 1.8rem;
       }
       #summary-tab-content .personality-description {
         margin: 0;
         color: #666;
-        font-size: 0.95rem;
-        line-height: 1.3;
+        font-size: 1rem;
+        line-height: 1.4;
       }
       #summary-tab-content .personality-icon {
-        font-size: 2.5em;
+        font-size: 3em;
         color: #036B55;
         margin-left: 15px;
       }

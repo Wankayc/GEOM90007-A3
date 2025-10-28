@@ -74,7 +74,7 @@ summary_server <- function(input, output, session, user_behavior) {
   output$personality_title <- renderText({
     data <- personality_data()
     if (is.null(data)) return("You are a Melbourne Explorer!")
-    paste("You are a", data$type, "!")
+    paste("Based on your searches you are a", data$type, "!")
   })
   
   output$personality_icon <- renderUI({
