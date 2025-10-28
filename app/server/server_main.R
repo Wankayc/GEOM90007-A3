@@ -18,6 +18,10 @@ server <- function(input, output, session) {
     first_load = TRUE
   )
   
+  source("./server/server_weather.R", local = TRUE)
+  session$userData$calendar_feed <- calendar_feed
+  weather_selected_dates <- reactiveVal(NULL)
+  
   # Show app content when data is loaded
   observe({
     # Wait for your main datasets to load
@@ -46,10 +50,9 @@ server <- function(input, output, session) {
   
   # Load all server logic
   source("server/server_wordcloud.R", local = TRUE)
-  source("server/server_weather.R", local = TRUE)
   source("server/server_map.R", local = TRUE)
   source("server/server_summary.R", local = TRUE)
   
-  trip_tab_server("trip") 
+  weather_module <- trip_tab_server("trip") 
   summary_server(input, output, session, user_behavior)
 }

@@ -293,7 +293,15 @@ trip_tab_server <- function(id) {
       req(input$range)
       rng <- as.Date(input$range)
       validate(need(diff(rng) <= 6, "You can select up to 7 days."))
-      seq(rng[1], rng[2], by = "day")
+      dates <- seq(rng[1], rng[2], by = "day")
+      
+      # Update the session data for summary tab
+      session$userData$weather_dates <- dates
+      if (!is.null(session$parent)) {
+        session$parent$userData$weather_dates <- dates
+      }
+      
+      dates
     })
     
     # Daily weather info
@@ -558,5 +566,12 @@ trip_tab_server <- function(id) {
         })
       })
     })
+    
+    # Return reactive values for external access
+    return(
+      list(
+        selected_dates = reactive(sel_dates())
+      )
+    )
   })
 }
