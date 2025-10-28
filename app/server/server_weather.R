@@ -10,6 +10,7 @@ library(shinyWidgets)
 library(sortable)
 
 
+
 # Summarise metrics for a selected period
 summarise_period_box <- function(feed, start_date, end_date) {
   d <- feed |> filter(date >= start_date, date <= end_date)
@@ -327,17 +328,6 @@ trip_tab_server <- function(id) {
         select(date, weather, temp, pm25, air)
     })
     
-    weather_emoji <- function(rain, tmax){
-      if (!is.na(rain) && rain >= 1) return("🌧️")
-      if (!is.na(tmax) && tmax >= 25) return("☀️")
-      "⛅️"
-    }
-    weather_label <- function(rain, tmax){
-      if (!is.na(rain) && rain >= 1) return("Rainy")
-      if (!is.na(tmax) && tmax >= 25) return("Sunny")
-      "Cloudy"
-    }
-    
     air_badge <- function(a) c(good="🟢", moderate="🟡", poor="🔴")[a]
     
     # Summary table
@@ -448,6 +438,7 @@ trip_tab_server <- function(id) {
       div(class="itinerary-row",
           lapply(ds, function(d){
             row <- calendar_feed |> dplyr::filter(date == d) |> dplyr::slice(1)
+            # NOW USES SHARED FUNCTIONS
             wx_ico <- if (nrow(row)) weather_emoji(row$rain, row$tmax) else "⛅️"
             wx_txt <- if (nrow(row)) weather_label(row$rain, row$tmax) else "Cloudy"
             

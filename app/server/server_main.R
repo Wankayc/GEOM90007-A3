@@ -1,5 +1,36 @@
 server <- function(input, output, session) {
   
+  weather_emoji <- function(rain, tmax) {
+    if (!is.na(rain) && rain >= 1) return("🌧️")
+    if (!is.na(tmax) && tmax >= 25) return("☀️")
+    "⛅️"
+  }
+  
+  weather_label <- function(rain, tmax) {
+    if (!is.na(rain) && rain >= 1) return("Rainy") 
+    if (!is.na(tmax) && tmax >= 25) return("Sunny")
+    "Cloudy"
+  }
+  
+  get_weather_for_date <- function(date, weather_df = calendar_feed) {
+    if (nrow(weather_df) == 0) {
+      return(list(emoji = "⛅️", label = "Cloudy", temp_min = NA, temp_max = NA, rain = NA))
+    }
+    
+    weather_row <- weather_df[weather_df$date == date, ]
+    if (nrow(weather_row) == 0) {
+      return(list(emoji = "⛅️", label = "Cloudy", temp_min = NA, temp_max = NA, rain = NA))
+    }
+    
+    list(
+      emoji = weather_emoji(weather_row$rain, weather_row$tmax),
+      label = weather_label(weather_row$rain, weather_row$tmax),
+      temp_min = weather_row$tmin,
+      temp_max = weather_row$tmax, 
+      rain = weather_row$rain
+    )
+  }
+  
   # Rule-based approach for determining Personality based on categories
   user_behavior <- reactiveValues(
     category_clicks = list(
@@ -18,7 +49,7 @@ server <- function(input, output, session) {
     first_load = TRUE
   )
   
-  source("./server/server_weather.R", local = TRUE)
+  source("server/server_weather.R", local = TRUE)
   session$userData$calendar_feed <- calendar_feed
   weather_selected_dates <- reactiveVal(NULL)
   
@@ -54,5 +85,5 @@ server <- function(input, output, session) {
   source("server/server_summary.R", local = TRUE)
   
   weather_module <- trip_tab_server("trip") 
-  summary_server(input, output, session, user_behavior)
+  summary_server(input, output, session, user_behavior, weather_module)
 }

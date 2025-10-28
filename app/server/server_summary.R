@@ -1,4 +1,4 @@
-summary_server <- function(input, output, session, user_behavior) {
+summary_server <- function(input, output, session, user_behavior, weather_module = NULL) {
   
   # Get weather data from the global environment or module
   weather_data <- reactive({
@@ -22,7 +22,15 @@ summary_server <- function(input, output, session, user_behavior) {
   
   # Get selected dates from weather module - default to current week if none selected
   selected_dates <- reactive({
-    # Try to get dates from weather module
+    # Try to get dates from weather module first
+    if (!is.null(weather_module)) {
+      weather_dates <- weather_module$selected_dates()
+      if (length(weather_dates) > 0) {
+        return(weather_dates)
+      }
+    }
+    
+    # Fallback: try session userData
     if (!is.null(session$userData$weather_dates)) {
       return(session$userData$weather_dates)
     }
@@ -32,40 +40,13 @@ summary_server <- function(input, output, session, user_behavior) {
     seq(today, today + 6, by = "day")
   })
   
-  # Weather icon function (same as in weather module)
-  weather_emoji <- function(rain, tmax){
-    if (!is.na(rain) && rain >= 1) return("🌧️")
-    if (!is.na(tmax) && tmax >= 25) return("☀️")
-    "⛅️"
-  }
-  
-  weather_label <- function(rain, tmax){
-    if (!is.na(rain) && rain >= 1) return("Rainy")
-    if (!is.na(tmax) && tmax >= 25) return("Sunny")
-    "Cloudy"
-  }
-  
-  # Get weather data for specific date
-  get_weather_for_date <- function(date) {
-    weather_df <- weather_data()
-    weather_row <- weather_df[weather_df$date == date, ]
-    if (nrow(weather_row) == 0) {
-      return(list(
-        emoji = "⛅️",
-        label = "Cloudy",
-        temp_min = NA,
-        temp_max = NA,
-        rain = NA
-      ))
-    }
-    
-    list(
-      emoji = weather_emoji(weather_row$rain, weather_row$tmax),
-      label = weather_label(weather_row$rain, weather_row$tmax),
-      temp_min = weather_row$tmin,
-      temp_max = weather_row$tmax,
-      rain = weather_row$rain
-    )
+  # Simple wrapper that uses shared function
+  get_weather_for_date_safe <- function(date) {
+    tryCatch({
+      get_weather_for_date(date, weather_data())
+    }, error = function(e) {
+      list(emoji = "⛅️", label = "Cloudy", temp_min = NA, temp_max = NA, rain = NA)
+    })
   }
   
   # FIXED: Create itinerary table with proper error handling
@@ -82,7 +63,7 @@ summary_server <- function(input, output, session, user_behavior) {
       tags$thead(
         tags$tr(
           lapply(dates, function(date) {
-            weather <- get_weather_for_date(date)
+            weather <- get_weather_for_date_safe(date)  # Use safe wrapper
             tags$th(
               div(class = "weather-icon", weather$emoji),
               div(class = "day-date", format(date, "%A")),
@@ -129,16 +110,16 @@ summary_server <- function(input, output, session, user_behavior) {
     )
   })
   
-  # FIXED: Enhanced helper function with proper error handling
+  # Enhanced helper function with proper error handling
   get_activities_for_date <- function(date, user_behavior) {
     # Always return at least an empty list as fallback
     activities <- list()
     
     tryCatch({
       day_of_week <- weekdays(date)
-      weather <- get_weather_for_date(date)
+      weather <- get_weather_for_date_safe(date)  # Use safe wrapper
       
-      # FIXED: Safe personality data retrieval
+      # personality data retrieval
       personality_info <- personality_data()
       personality <- if (!is.null(personality_info) && !is.null(personality_info$type)) {
         personality_info$type
@@ -160,7 +141,7 @@ summary_server <- function(input, output, session, user_behavior) {
         list(name = "Lygon Street Restaurants", time = "12:00 PM - 10:00 PM", location = "Little Italy", type = "food")
       )
       
-      # FIXED: Safe activity selection
+      # activity selection
       if (personality == "Food Lover") {
         food_activities <- base_activities[sapply(base_activities, function(x) !is.null(x$type) && x$type == "food")]
         if (length(food_activities) > 0) {
@@ -184,7 +165,7 @@ summary_server <- function(input, output, session, user_behavior) {
         }
       }
       
-      # FIXED: Safe weather adjustments
+      # weather adjustments
       if (!is.na(weather$rain) && weather$rain >= 1) {
         # Rainy day - add indoor activity
         indoor_activities <- base_activities[sapply(base_activities, function(x) !is.null(x$type) && x$type == "indoor")]
@@ -209,7 +190,7 @@ summary_server <- function(input, output, session, user_behavior) {
         }
       }
       
-      # FIXED: Safe day-specific activities
+      # day-specific activities
       if (day_of_week == "Saturday" && length(activities) < 3) {
         activities <- c(activities, list(
           list(name = "Queen Victoria Market", time = "6:00 AM - 3:00 PM", location = "Saturday Market", type = "market")
