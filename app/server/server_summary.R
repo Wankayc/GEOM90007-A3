@@ -49,7 +49,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     })
   }
   
-  # FIXED: Create itinerary table with proper error handling
+  # OPTION 1: Simplified itinerary showing only top activity per day
   output$itinerary_table <- renderUI({
     dates <- selected_dates()
     
@@ -59,11 +59,11 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     }
     
     tags$table(
-      class = "itinerary-table",
+      class = "itinerary-table simplified",
       tags$thead(
         tags$tr(
           lapply(dates, function(date) {
-            weather <- get_weather_for_date_safe(date)  # Use safe wrapper
+            weather <- get_weather_for_date_safe(date)
             tags$th(
               div(class = "weather-icon", weather$emoji),
               div(class = "day-date", format(date, "%A")),
@@ -75,27 +75,23 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       tags$tbody(
         tags$tr(
           lapply(dates, function(date) {
-            # FIXED: Safe activity retrieval with tryCatch
             activities <- tryCatch({
               get_activities_for_date(date, user_behavior)
             }, error = function(e) {
-              # Return empty list if there's any error
               list()
             })
             
+            # Take only the first (top) activity
+            top_activity <- if (length(activities) > 0) activities[[1]] else NULL
+            
             tags$td(
-              if (length(activities) > 0) {
-                lapply(activities, function(activity) {
-                  # FIXED: Validate activity structure
-                  if (!is.null(activity$name) && !is.null(activity$time) && !is.null(activity$location)) {
-                    div(
-                      class = "event-title",
-                      activity$name,
-                      div(class = "event-time", activity$time),
-                      div(class = "event-location", activity$location)
-                    )
-                  }
-                })
+              if (!is.null(top_activity)) {
+                div(
+                  class = "top-activity",
+                  div(class = "event-title", top_activity$name),
+                  div(class = "event-time", top_activity$time),
+                  div(class = "event-location", top_activity$location)
+                )
               } else {
                 div(
                   class = "no-activities",
@@ -110,7 +106,6 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     )
   })
   
-
   get_activities_for_date <- function(date, user_behavior) {
     activities <- list()
     
@@ -393,7 +388,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
           }
         }
         
-        # Limit to 3 activities
+        # Limit to 3 activities (though only top one will be shown)
         if (length(activities) > 3) {
           activities <- activities[1:3]
         }

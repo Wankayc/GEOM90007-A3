@@ -1,6 +1,5 @@
 div(id = "summary-tab-content",
     
-    # Placeholder UI for summary tab
     tags$head(
       tags$style(HTML("
       #summary-tab-content {
@@ -145,6 +144,7 @@ div(id = "summary-tab-content",
         padding: 30px;
         margin-top: 25px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        min-height: 400px; /* Taller itinerary section */
       }
       #summary-tab-content .itinerary-section h4 {
         font-weight: 600;
@@ -153,54 +153,111 @@ div(id = "summary-tab-content",
         font-size: 1.5rem;
         text-align: center;
       }
-      #summary-tab-content .itinerary-table {
+      
+      /* HORIZONTALLY SCROLLABLE ITINERARY - LARGER DAYS */
+      #summary-tab-content .itinerary-scroll-container {
         width: 100%;
-        border-collapse: separate;
-        border-spacing: 6px;
-        font-size: 1.05rem;
+        overflow-x: auto;
+        padding-bottom: 15px;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        background: #fafafa;
+        min-height: 300px; /* Taller scroll container */
       }
-      #summary-tab-content .itinerary-table th, 
-      #summary-tab-content .itinerary-table td {
-        background-color: #ffffff;
-        border: 2px solid #dee2e6;
-        color: #212529;
+      #summary-tab-content .itinerary-table.simplified {
+        min-width: 1200px; /* Wider to accommodate larger days */
+        border-collapse: separate;
+        border-spacing: 12px; /* More spacing between days */
+        font-size: 1.05rem;
+        width: 100%;
+      }
+      #summary-tab-content .itinerary-table.simplified th {
+        padding: 20px 16px; /* Larger header padding */
+        text-align: center;
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        min-width: 180px; /* Wider day columns */
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      #summary-tab-content .itinerary-table.simplified td {
+        padding: 0;
         text-align: center;
         vertical-align: top;
-        padding: 15px;
-        border-radius: 8px;
+        border-bottom: 1px solid #e9ecef;
+        min-width: 180px; /* Wider day columns */
+        height: 220px; /* Taller day cells */
       }
-      #summary-tab-content .itinerary-table th {
-        font-weight: 600;
-        padding-bottom: 20px;
-        background-color: #f8f9fa;
-      }
-      #summary-tab-content .itinerary-table .weather-icon {
-        font-size: 2.2em;
-        margin-bottom: 10px;
-        color: #036B55;
-      }
-      #summary-tab-content .itinerary-table .day-date {
-        font-weight: bold;
-        font-size: 1.1rem;
-      }
-      #summary-tab-content .itinerary-table td {
-        height: 180px;
-        vertical-align: top;
-      }
-      #summary-tab-content .itinerary-table .event-title {
-        font-weight: bold;
+      #summary-tab-content .itinerary-table.simplified .weather-icon {
+        font-size: 2em; /* Larger weather icon */
         margin-bottom: 8px;
-        font-size: 1.1rem;
         color: #036B55;
       }
-      #summary-tab-content .itinerary-table .event-time {
-        font-size: 1rem;
-        color: #6c757d;
+      #summary-tab-content .itinerary-table.simplified .day-date {
+        font-weight: 700; /* Bolder day text */
+        font-size: 1.1em; /* Larger day text */
+        margin-bottom: 4px;
+        color: #036B55;
       }
-      #summary-tab-content .itinerary-table .event-location {
-        font-size: 0.95rem;
-        color: #495057;
-        margin-top: 5px;
+      #summary-tab-content .itinerary-table.simplified .date-number {
+        font-size: 0.95em; /* Slightly larger date */
+        color: #6c757d;
+        font-weight: 500;
+      }
+      #summary-tab-content .itinerary-table.simplified .top-activity {
+        padding: 16px 14px; /* Slightly larger padding */
+        background: #f0f7ff;
+        border-radius: 10px; /* Slightly larger border radius */
+        border-left: 4px solid #036B55;
+        text-align: left;
+        min-height: 160px; /* Taller activity card */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin: 0 6px;
+      }
+      #summary-tab-content .itinerary-table.simplified .top-activity .event-title {
+        font-weight: 600;
+        font-size: 0.9em; /* Slightly smaller title */
+        margin-bottom: 8px;
+        color: #036B55;
+        line-height: 1.3;
+      }
+      #summary-tab-content .itinerary-table.simplified .top-activity .event-time {
+        font-size: 0.8em; /* Slightly smaller time */
+        color: #666;
+        margin-bottom: 6px;
+      }
+      #summary-tab-content .itinerary-table.simplified .top-activity .event-location {
+        font-size: 0.75em; /* Slightly smaller location */
+        color: #888;
+        line-height: 1.3;
+      }
+      #summary-tab-content .itinerary-table.simplified .no-activities {
+        padding: 40px 20px; /* Larger padding for empty state */
+        text-align: center;
+        font-size: 0.9em;
+        color: #999;
+        font-style: italic;
+      }
+
+      /* Scrollbar styling */
+      #summary-tab-content .itinerary-scroll-container::-webkit-scrollbar {
+        height: 10px; /* Slightly taller scrollbar */
+      }
+      #summary-tab-content .itinerary-scroll-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 5px;
+        margin: 0 15px;
+      }
+      #summary-tab-content .itinerary-scroll-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 5px;
+      }
+      #summary-tab-content .itinerary-scroll-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
       }
 
       /* Combined top section styling */
@@ -281,10 +338,13 @@ div(id = "summary-tab-content",
       )
     ),
     
-    # Itinerary Section - Full width and larger at bottom
+    # Itinerary Section - Now with larger days and taller layout
     div(
       class = "itinerary-section",
       h4("Your Recommended Itinerary"),
-      uiOutput("itinerary_table")
+      div(
+        class = "itinerary-scroll-container",
+        uiOutput("itinerary_table")
+      )
     )
 )
