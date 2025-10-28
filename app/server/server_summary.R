@@ -115,6 +115,19 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     activities <- list()
     
     tryCatch({
+      # FIRST PRIORITY: Check if user has manually dragged activities for this date
+      manual_activities <- list()
+      if (!is.null(weather_module)) {
+        manual_activities <- weather_module$get_activities_for_date(date)
+      }
+      
+      # If user has manually selected activities, use those INSTEAD of personality recommendations
+      if (length(manual_activities) > 0) {
+        cat("Using manually selected activities for", as.character(date), "\n")
+        return(manual_activities)
+      }
+      
+      # Only proceed to personality-based recommendations if no manual activities
       day_of_week <- weekdays(date)
       weather <- get_weather_for_date_safe(date)
       
