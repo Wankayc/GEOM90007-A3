@@ -22,6 +22,7 @@ library(googleway)
 library(ggiraph)
 
 source(here("app", "tableau-in-shiny-v1.2.R"))
+#source(here("R", "weather_utils.R"))
 
 # read and clean data in wordcloud
 landmarks <- read.csv(here('data', 'landmarks.csv'), stringsAsFactors = FALSE)
