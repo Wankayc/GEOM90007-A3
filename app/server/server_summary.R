@@ -140,69 +140,28 @@ summary_server <- function(input, output, session, user_behavior, weather_module
         total_clicks <- sum(unlist(user_behavior$category_clicks), na.rm = TRUE)
       }
       
-      # If user has no clicks, use random recommendations from theme_data
+      # If user has no clicks, use HARDCODED default activities
       if (total_clicks == 0) {
-        cat("No user data - using random recommendations for", as.character(date), "\n")
+        cat("No user data - using HARDCODED recommendations for", as.character(date), "\n")
         
-        dates <- selected_dates()
-        if (length(dates) > 0) {
-          date_index <- which(dates == date)
-          
-          # Use actual theme_data
-          all_places <- theme_data %>%
-            distinct(Name, .keep_all = TRUE)
-          
-          # Apply weather filtering
-          rain_amount <- if (!is.null(weather$rain) && !is.na(weather$rain)) weather$rain else 0
-          temp_max <- if (!is.null(weather$tmax) && !is.na(weather$tmax)) weather$tmax else 20
-          
-          if (rain_amount >= 1) {
-            filtered_places <- all_places %>%
-              filter(Theme %in% c("Arts & Culture", "Shopping", "Food & Drink", "Public Services", "Attractions"))
-          } else if (temp_max >= 25) {
-            filtered_places <- all_places %>%
-              filter(Theme %in% c("Parks & Gardens", "Attractions", "Leisure", "Food & Drink"))
-          } else {
-            filtered_places <- all_places
-          }
-          
-          if (nrow(filtered_places) == 0) {
-            filtered_places <- all_places
-          }
-          
-          # Simple deterministic sampling based on date index
-          sample_size <- min(3, nrow(filtered_places))
-          start_idx <- ((date_index - 1) * sample_size) %% nrow(filtered_places) + 1
-          end_idx <- min(start_idx + sample_size - 1, nrow(filtered_places))
-          
-          suggested_places <- filtered_places %>%
-            slice(start_idx:end_idx)
-          
-          # Convert to activities
-          if (nrow(suggested_places) > 0) {
-            activities <- lapply(1:nrow(suggested_places), function(i) {
-              place <- suggested_places[i, ]
-              
-              place_name <- if (!is.null(place$Name)) place$Name else "Melbourne Activity"
-              place_subtheme <- if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
-              place_rating <- if (!is.null(place$Google_Rating)) place$Google_Rating else NA
-              
-              time_slots <- c("9:00 AM - 11:00 AM", "1:00 PM - 3:00 PM", "4:00 PM - 6:00 PM")
-              time_slot <- time_slots[min(i, length(time_slots))]
-              
-              location_desc <- place_subtheme
-              if (!is.na(place_rating)) {
-                location_desc <- paste(location_desc, "•", paste("⭐", place_rating))
-              }
-              
-              list(
-                name = place_name,
-                time = time_slot,
-                location = location_desc
-              )
-            })
-          }
-        }
+        # HARDCODED DEFAULT ACTIVITIES - NO MUSEUMS!
+        default_activities <- list(
+          list(name = "Royal Botanic Gardens", time = "9:00 AM - 12:00 PM", location = "Park & Gardens"),
+          list(name = "Queen Victoria Market", time = "10:00 AM - 2:00 PM", location = "Market & Shopping"), 
+          list(name = "Eureka Skydeck", time = "1:00 PM - 3:00 PM", location = "Observation Deck"),
+          list(name = "Southbank Promenade", time = "4:00 PM - 7:00 PM", location = "Riverside Dining"),
+          list(name = "St Kilda Beach", time = "2:00 PM - 5:00 PM", location = "Beach & Pier"),
+          list(name = "Melbourne Zoo", time = "10:00 AM - 4:00 PM", location = "Wildlife Park"),
+          list(name = "Federation Square", time = "11:00 AM - 1:00 PM", location = "Public Square"),
+          list(name = "Lygon Street", time = "6:00 PM - 9:00 PM", location = "Italian Restaurants"),
+          list(name = "Chinatown", time = "12:00 PM - 2:00 PM", location = "Asian Cuisine"),
+          list(name = "Docklands", time = "3:00 PM - 6:00 PM", location = "Waterfront Area")
+        )
+        
+        # Select 3 based on date for variety
+        date_num <- as.numeric(date) %% length(default_activities)
+        start_idx <- (date_num %% (length(default_activities) - 2)) + 1
+        activities <- default_activities[start_idx:(start_idx + 2)]
         
       } else {
         # USER HAS DATA - Personality-based recommendations USING ACTUAL THEME_DATA
@@ -216,62 +175,63 @@ summary_server <- function(input, output, session, user_behavior, weather_module
         # Filter by personality type with date-based variation
         date_index <- which(selected_dates() == date)
         
-        if (personality == "Food Lover") {
-          cat("Selecting food activities for Food Lover\n")
-          food_places <- all_places %>%
-            filter(Theme == "Food & Drink") %>%
-            arrange(Name)  # Sort for consistent ordering
+        if (personality == "Urban Adventurer") {
+          cat("Selecting urban activities for Urban Adventurer\n")
+          selected_places <- all_places %>%
+            filter(Theme %in% c("Attractions", "Shopping", "Food & Drink", "Arts & Culture", "Entertainment")) %>%
+            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
+            sample_n(min(3, nrow(.)))
           
-          # Use date index to select different food places each day
-          start_idx <- ((date_index - 1) * 3) %% nrow(food_places) + 1
-          end_idx <- min(start_idx + 2, nrow(food_places))
-          selected_places <- food_places %>%
-            slice(start_idx:end_idx)
+        } else if (personality == "Practical Traveler") {
+          cat("Selecting practical activities for Practical Traveler\n")
+          selected_places <- all_places %>%
+            filter(Theme %in% c("Shopping", "Food & Drink", "Attractions", "Transport", "Markets")) %>%
+            filter(!grepl("fire station|police station|hospital|clinic|bus stop|train station", 
+                          Name, ignore.case = TRUE)) %>%
+            sample_n(min(3, nrow(.)))
+          
+        } else if (personality == "Wellness Seeker") {
+          cat("Selecting wellness activities for Wellness Seeker\n")
+          selected_places <- all_places %>%
+            filter(Theme %in% c("Leisure", "Parks & Gardens", "Food & Drink", "Attractions")) %>%
+            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
+            sample_n(min(3, nrow(.)))
+          
+        } else if (personality == "Melbourne Explorer") {
+          cat("Selecting diverse activities for Melbourne Explorer\n")
+          selected_places <- all_places %>%
+            filter(Theme %in% c("Arts & Culture", "Attractions", "Food & Drink", "Parks & Gardens", 
+                                "Shopping", "Leisure", "Heritage", "Markets", "Entertainment")) %>%
+            filter(!Theme %in% c("Transport", "Public Services", "Health Services")) %>%
+            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
+            sample_n(min(3, nrow(.)))
+          
+        } else if (personality == "Food Lover") {
+          cat("Selecting food activities for Food Lover\n")
+          selected_places <- all_places %>%
+            filter(Theme == "Food & Drink") %>%
+            sample_n(min(3, nrow(.)))
           
         } else if (personality == "Nature Enthusiast") {
           cat("Selecting outdoor activities for Nature Enthusiast\n")
-          nature_places <- all_places %>%
+          selected_places <- all_places %>%
             filter(Theme %in% c("Parks & Gardens", "Attractions", "Leisure")) %>%
-            arrange(Name)
-          
-          start_idx <- ((date_index - 1) * 3) %% nrow(nature_places) + 1
-          end_idx <- min(start_idx + 2, nrow(nature_places))
-          selected_places <- nature_places %>%
-            slice(start_idx:end_idx)
+            sample_n(min(3, nrow(.)))
           
         } else if (personality == "Culture Connoisseur") {
           cat("Selecting culture activities for Culture Connoisseur\n")
-          culture_places <- all_places %>%
-            filter(Theme %in% c("Arts & Culture", "Heritage", "Public Services")) %>%
-            arrange(Name)
-          
-          start_idx <- ((date_index - 1) * 3) %% nrow(culture_places) + 1
-          end_idx <- min(start_idx + 2, nrow(culture_places))
-          selected_places <- culture_places %>%
-            slice(start_idx:end_idx)
-          
-        } else if (personality == "Urban Adventurer") {
-          cat("Selecting mixed activities for Urban Adventurer\n")
-          urban_places <- all_places %>%
-            filter(Theme %in% c("Shopping", "Transport", "Attractions", "Food & Drink")) %>%
-            arrange(Name)
-          
-          start_idx <- ((date_index - 1) * 3) %% nrow(urban_places) + 1
-          end_idx <- min(start_idx + 2, nrow(urban_places))
-          selected_places <- urban_places %>%
-            slice(start_idx:end_idx)
+          selected_places <- all_places %>%
+            filter(Theme %in% c("Arts & Culture", "Heritage", "Attractions")) %>%
+            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
+            sample_n(min(3, nrow(.)))
           
         } else {
-          # Default for any other personality - mix of everything
-          cat("Selecting default activities for", personality, "\n")
-          default_places <- all_places %>%
-            filter(Theme %in% c("Arts & Culture", "Attractions", "Food & Drink")) %>%
-            arrange(Name)
-          
-          start_idx <- ((date_index - 1) * 3) %% nrow(default_places) + 1
-          end_idx <- min(start_idx + 2, nrow(default_places))
-          selected_places <- default_places %>%
-            slice(start_idx:end_idx)
+          # Default for any other personality - safe tourist attractions only
+          cat("Selecting safe default activities for", personality, "\n")
+          selected_places <- all_places %>%
+            filter(Theme %in% c("Arts & Culture", "Attractions", "Food & Drink", "Parks & Gardens", "Shopping")) %>%
+            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
+            sample_n(min(3, nrow(.)))
         }
         
         # Convert selected places to activities
@@ -310,90 +270,6 @@ summary_server <- function(input, output, session, user_behavior, weather_module
             )
           })
         }
-        
-        # Weather adjustments using actual data
-        rain_amount <- if (!is.null(weather$rain) && !is.na(weather$rain)) weather$rain else 0
-        temp_max <- if (!is.null(weather$tmax) && !is.na(weather$tmax)) weather$tmax else 20
-        
-        # Add weather-appropriate activities if we have fewer than 3
-        if (length(activities) < 3) {
-          if (rain_amount >= 1) {
-            # Add indoor activity for rain
-            indoor_places <- all_places %>%
-              filter(Theme %in% c("Arts & Culture", "Shopping", "Public Services")) %>%
-              filter(!Name %in% sapply(activities, function(x) x$name)) %>%
-              slice(1)
-            
-            if (nrow(indoor_places) > 0) {
-              activities <- c(activities, list(
-                list(
-                  name = indoor_places$Name[1],
-                  time = "1:00 PM - 3:00 PM",
-                  location = paste(indoor_places$Sub_Theme[1], ifelse(!is.na(indoor_places$Google_Rating[1]), 
-                                                                      paste("• ⭐", indoor_places$Google_Rating[1]), ""))
-                )
-              ))
-            }
-          } else if (temp_max >= 25 && length(activities) < 3) {
-            # Add outdoor activity for hot weather
-            outdoor_places <- all_places %>%
-              filter(Theme %in% c("Parks & Gardens", "Leisure")) %>%
-              filter(!Name %in% sapply(activities, function(x) x$name)) %>%
-              slice(1)
-            
-            if (nrow(outdoor_places) > 0) {
-              activities <- c(activities, list(
-                list(
-                  name = outdoor_places$Name[1],
-                  time = "4:00 PM - 6:00 PM",
-                  location = paste(outdoor_places$Sub_Theme[1], ifelse(!is.na(outdoor_places$Google_Rating[1]), 
-                                                                       paste("• ⭐", outdoor_places$Google_Rating[1]), ""))
-                )
-              ))
-            }
-          }
-        }
-        
-        # Day-specific activities using actual data
-        if (!is.null(day_of_week) && length(activities) < 3) {
-          if (day_of_week == "Saturday") {
-            market_places <- all_places %>%
-              filter(grepl("market|Market", Name) | grepl("market|Market", Sub_Theme)) %>%
-              slice(1)
-            
-            if (nrow(market_places) > 0) {
-              activities <- c(activities, list(
-                list(
-                  name = market_places$Name[1],
-                  time = "9:00 AM - 1:00 PM",
-                  location = paste("Saturday Market •", market_places$Sub_Theme[1])
-                )
-              ))
-            }
-          } else if (day_of_week == "Sunday") {
-            sunday_places <- all_places %>%
-              filter(Theme %in% c("Arts & Culture", "Shopping") | 
-                       grepl("art|craft|Art|Craft", Sub_Theme)) %>%
-              slice(1)
-            
-            if (nrow(sunday_places) > 0) {
-              activities <- c(activities, list(
-                list(
-                  name = sunday_places$Name[1],
-                  time = "10:00 AM - 4:00 PM",
-                  location = paste("Sunday Activity •", sunday_places$Sub_Theme[1])
-                )
-              ))
-            }
-          }
-        }
-        
-        # Limit to 3 activities (though only top one will be shown)
-        if (length(activities) > 3) {
-          activities <- activities[1:3]
-        }
-        
-        cat("Final activities count:", length(activities), "\n")
       }
       
       return(activities)
@@ -401,20 +277,11 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     }, error = function(e) {
       cat("ERROR in get_activities_for_date:", e$message, "\n")
       cat("Date:", as.character(date), "Personality:", personality, "\n")
-      # Return guaranteed fallback activities from theme_data
-      fallback_places <- theme_data %>%
-        distinct(Name, .keep_all = TRUE) %>%
-        slice(1:2)
-      
-      fallback_activities <- lapply(1:min(2, nrow(fallback_places)), function(i) {
-        list(
-          name = fallback_places$Name[i],
-          time = "10:00 AM - 5:00 PM",
-          location = fallback_places$Sub_Theme[i]
-        )
-      })
-      
-      return(fallback_activities)
+      # Return guaranteed HARDCODED fallback activities
+      return(list(
+        list(name = "Royal Botanic Gardens", time = "10:00 AM - 5:00 PM", location = "Park"),
+        list(name = "Queen Victoria Market", time = "9:00 AM - 2:00 PM", location = "Market")
+      ))
     })
   }
   
