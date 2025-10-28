@@ -91,9 +91,42 @@ collapsible_css <- tags$style(HTML("
 
 # Heading spacing CSS (unify title/subtitle gaps)
 heading_spacing_css <- tags$style(HTML("
-  /* 只负责主标题与其后第一段副标题之间的间距；不影响其他部分 */
+  /* Control spacing between main titles and subtitles */
   h2.section-lead { margin: 0 0 8px 0 !important; }
   p.section-desc { margin: 0 0 16px 0 !important; }
+"))
+
+# View on Map button styling
+map_button_css <- tags$style(HTML("
+  /* Enhanced 3D button styling */
+  #showMapBtn {
+    position: relative;
+    transform: translateY(0);
+    border-bottom: 2px solid #014839 !important;
+  }
+  #showMapBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(3, 107, 85, 0.45), inset 0 1px 0 rgba(255,255,255,0.3) !important;
+    background: linear-gradient(to bottom, #05a07d 0%, #048d6f 50%, #036B55 100%) !important;
+  }
+  #showMapBtn:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 8px rgba(3, 107, 85, 0.3), inset 0 1px 2px rgba(0,0,0,0.2) !important;
+    border-bottom: 1px solid #014839 !important;
+  }
+  #showMapBtn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+  }
+  #showMapBtn:hover::before {
+    left: 100%;
+  }
 "))
 
 # Get unique theme values from theme_data for UI radio buttons
@@ -104,7 +137,7 @@ main_cloud_tab <- tabPanel(
   title='Explore by Category',
   collapsible_css,
   collapsible_js,
-  heading_spacing_css,  # << 新增：统一主/副标题间距
+  heading_spacing_css,
   div(class='page-wrap',
       h2(class='section-lead', 'Explore Melbourne by Category'),
       p(class='section-desc', style='color:#666; font-size:14px; margin-bottom:16px; line-height:1.6;',
@@ -141,12 +174,11 @@ main_cloud_tab <- tabPanel(
 sub_cloud_tab <- tabPanel(
   title='Popular Attractions',
   div(class='page-wrap',
+      map_button_css,
       fluidRow(
         column(width = 9,
-               h2(class='section-lead sub-cloud-title', 'Highlights in This Category'),
-               p(class='section-desc sub-cloud-desc', style='color:#666; font-size:14px; line-height:1.6; margin-bottom:16px;',
-                 'Click on any attraction type to view the highest-rated places.'
-               ),
+               uiOutput("dynamic_subcloud_title"),
+               uiOutput("dynamic_subcloud_desc"),
                div(class='wordcloud-container-wrapper',
                    div(class='full-bleed',
                        tableauPublicViz(
@@ -192,11 +224,11 @@ sub_cloud_tab <- tabPanel(
       fluidRow(
         column(width = 9,
                div(style='margin-bottom: 15px;',
-                   h2('Top Rated Places by Google Reviews', style='display:inline-block; margin-right:20px;'),
+                   uiOutput("dynamic_ranking_title"),
                    actionButton('showMapBtn', 
                                 'View on Map',
                                 icon = icon('map-marker-alt'),
-                                style = 'background-color:#036B55; color:white; padding:8px 20px; border:none; border-radius:5px; font-size:14px; font-weight:600; cursor:pointer; vertical-align:middle;')
+                                style = 'background: linear-gradient(to bottom, #048d6f 0%, #036B55 50%, #025246 100%); color:white; padding:10px 24px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; vertical-align:middle; margin-left:10px; box-shadow: 0 4px 12px rgba(3, 107, 85, 0.35), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease; position: relative; overflow: hidden;')
                ),
                girafeOutput('plot_ranking', height='95vh')
         ),
@@ -220,4 +252,3 @@ list(
   main_cloud_tab,
   sub_cloud_tab
 )
-
