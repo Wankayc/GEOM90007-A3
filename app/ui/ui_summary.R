@@ -144,7 +144,6 @@ div(id = "summary-tab-content",
         padding: 30px;
         margin-top: 25px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        min-height: 400px; /* Taller itinerary section */
       }
       #summary-tab-content .itinerary-section h4 {
         font-weight: 600;
@@ -154,7 +153,7 @@ div(id = "summary-tab-content",
         text-align: center;
       }
       
-      /* HORIZONTALLY SCROLLABLE ITINERARY - LARGER DAYS */
+      /* RESPONSIVE ITINERARY - SCALES BASED ON CONTENT */
       #summary-tab-content .itinerary-scroll-container {
         width: 100%;
         overflow-x: auto;
@@ -162,90 +161,100 @@ div(id = "summary-tab-content",
         border: 1px solid #e9ecef;
         border-radius: 10px;
         background: #fafafa;
-        min-height: 300px; /* Taller scroll container */
+        min-height: 280px;
       }
+      
+      /* Default table styling */
       #summary-tab-content .itinerary-table.simplified {
-        min-width: 1200px; /* Wider to accommodate larger days */
-        border-collapse: separate;
-        border-spacing: 12px; /* More spacing between days */
-        font-size: 1.05rem;
         width: 100%;
+        border-collapse: separate;
+        border-spacing: 12px;
+        font-size: 1.05rem;
       }
+      
+      /* Header styling */
       #summary-tab-content .itinerary-table.simplified th {
-        padding: 20px 16px; /* Larger header padding */
+        padding: 20px 16px;
         text-align: center;
         background: #f8f9fa;
         border-bottom: 2px solid #dee2e6;
         font-weight: 600;
-        min-width: 180px; /* Wider day columns */
+        min-width: 160px;
         position: sticky;
         top: 0;
         z-index: 10;
       }
+      
+      /* Cell styling */
       #summary-tab-content .itinerary-table.simplified td {
         padding: 0;
         text-align: center;
         vertical-align: top;
         border-bottom: 1px solid #e9ecef;
-        min-width: 180px; /* Wider day columns */
-        height: 220px; /* Taller day cells */
+        min-width: 160px;
+        height: 200px;
       }
+      
+      /* Weather and day styling */
       #summary-tab-content .itinerary-table.simplified .weather-icon {
-        font-size: 2em; /* Larger weather icon */
+        font-size: 2em;
         margin-bottom: 8px;
         color: #036B55;
       }
       #summary-tab-content .itinerary-table.simplified .day-date {
-        font-weight: 700; /* Bolder day text */
-        font-size: 1.1em; /* Larger day text */
+        font-weight: 700;
+        font-size: 1.1em;
         margin-bottom: 4px;
         color: #036B55;
       }
       #summary-tab-content .itinerary-table.simplified .date-number {
-        font-size: 0.95em; /* Slightly larger date */
+        font-size: 0.95em;
         color: #6c757d;
         font-weight: 500;
       }
+      
+      /* Activity styling with larger fonts */
       #summary-tab-content .itinerary-table.simplified .top-activity {
-        padding: 16px 14px; /* Slightly larger padding */
+        padding: 16px 14px;
         background: #f0f7ff;
-        border-radius: 10px; /* Slightly larger border radius */
+        border-radius: 10px;
         border-left: 4px solid #036B55;
         text-align: left;
-        min-height: 160px; /* Taller activity card */
+        min-height: 150px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         margin: 0 6px;
       }
       #summary-tab-content .itinerary-table.simplified .top-activity .event-title {
-        font-weight: 600;
-        font-size: 0.9em; /* Slightly smaller title */
-        margin-bottom: 8px;
+        font-weight: 700;
+        font-size: 1.1em;
+        margin-bottom: 10px;
         color: #036B55;
         line-height: 1.3;
       }
       #summary-tab-content .itinerary-table.simplified .top-activity .event-time {
-        font-size: 0.8em; /* Slightly smaller time */
+        font-size: 1em;
         color: #666;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
+        font-weight: 600;
       }
       #summary-tab-content .itinerary-table.simplified .top-activity .event-location {
-        font-size: 0.75em; /* Slightly smaller location */
+        font-size: 0.95em;
         color: #888;
-        line-height: 1.3;
+        line-height: 1.4;
       }
       #summary-tab-content .itinerary-table.simplified .no-activities {
-        padding: 40px 20px; /* Larger padding for empty state */
+        padding: 40px 20px;
         text-align: center;
-        font-size: 0.9em;
+        font-size: 1em;
         color: #999;
         font-style: italic;
       }
 
       /* Scrollbar styling */
       #summary-tab-content .itinerary-scroll-container::-webkit-scrollbar {
-        height: 10px; /* Slightly taller scrollbar */
+        height: 10px;
       }
       #summary-tab-content .itinerary-scroll-container::-webkit-scrollbar-track {
         background: #f1f1f1;
@@ -268,6 +277,16 @@ div(id = "summary-tab-content",
         padding: 30px;
         margin-bottom: 30px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      
+      /* Responsive behavior - only scroll when needed */
+      @media (min-width: 1200px) {
+        #summary-tab-content .itinerary-scroll-container {
+          overflow-x: visible;
+        }
+        #summary-tab-content .itinerary-table.simplified {
+          min-width: auto;
+        }
       }
     "))
     ),
@@ -338,7 +357,7 @@ div(id = "summary-tab-content",
       )
     ),
     
-    # Itinerary Section - Now with larger days and taller layout
+    # Itinerary Section - Responsive scaling
     div(
       class = "itinerary-section",
       h4("Your Recommended Itinerary"),
