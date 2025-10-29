@@ -35,9 +35,8 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       return(session$userData$weather_dates)
     }
     
-    # Default: use current week (today + next 6 days)
-    today <- Sys.Date()
-    seq(today, today + 6, by = "day")
+    # Default: empty (no dates selected)
+    return(as.Date(character()))
   })
   
   # Simple wrapper that uses shared function
@@ -51,6 +50,9 @@ summary_server <- function(input, output, session, user_behavior, weather_module
   
   # Track clicked day for carousel - FIXED to properly update
   clicked_day <- reactiveVal(1)
+  
+  # NEW: Track whether we're showing default recommendations
+  showing_default_recommendations <- reactiveVal(TRUE)
   
   # Store itinerary data separately to prevent re-rendering
   itinerary_data <- reactiveValues(
@@ -71,6 +73,9 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       })
       itinerary_data$activities <- activities_list
       itinerary_data$last_updated <- Sys.time()
+      showing_default_recommendations(FALSE)
+    } else {
+      showing_default_recommendations(TRUE)
     }
   })
   
@@ -80,11 +85,42 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     
     # Validate we have dates
     if (length(dates) == 0) {
-      return(div("No dates selected", style = "color: #999; font-style: italic;"))
+      return(
+        div(
+          class = "empty-itinerary-message",
+          h3("📅 Plan Your Melbourne Adventure"),
+          p("To get started with your personalized itinerary:"),
+          tags$ul(
+            tags$li("Visit the Weather tab to select your travel dates"),
+            tags$li("Choose activities that interest you in the Explore tab"),
+            tags$li("Your recommended itinerary will appear here automatically")
+          ),
+          p("Once you've selected dates, you'll see daily recommendations that you can click to explore related places!")
+        )
+      )
     }
     
     # Use stored activities to prevent re-rendering
     activities_list <- itinerary_data$activities
+    
+    # Check if we have any activities at all
+    has_any_activities <- any(sapply(activities_list, length) > 0)
+    
+    if (!has_any_activities) {
+      return(
+        div(
+          class = "empty-itinerary-message",
+          h3("✨ Building Your Personalized Itinerary"),
+          p("We're creating your perfect Melbourne experience based on:"),
+          tags$ul(
+            tags$li("Your selected dates in the Weather tab"),
+            tags$li("Your interests from the Explore tab"),
+            tags$li("Current weather conditions and local insights")
+          ),
+          p("Your activities will appear here shortly. Click on any day to discover related places!")
+        )
+      )
+    }
     
     tags$table(
       class = "itinerary-table simplified",
@@ -143,79 +179,108 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     cat("Day clicked before update:", clicked_day(), "->", input$day_clicked, "\n")
     clicked_day(input$day_clicked)
     cat("Day clicked after update:", clicked_day(), "\n")
+    showing_default_recommendations(FALSE)
     
     # Force carousel to update by triggering reactivity
     carousel_data()
   })
   
-  # Carousel data reactive - FIXED to properly depend on clicked_day()
-  carousel_data <- reactive({
-    day <- clicked_day()
-    cat("Carousel data requested for day:", day, "\n")
+  # NEW: Get default recommendations when no itinerary exists
+  get_default_recommendations <- function() {
+    # Get popular Melbourne places across different categories
+    default_places <- theme_data %>%
+      filter(!Theme %in% c("Public Services", "Health Services", "Transport")) %>%
+      filter(!grepl("hospital|clinic|police|fire station", Name, ignore.case = TRUE)) %>%
+      distinct(Name, .keep_all = TRUE) %>%
+      arrange(desc(Google_Rating)) %>%
+      head(9)
     
+    return(default_places)
+  }
+  
+  # Carousel data reactive - UPDATED to handle default recommendations
+  carousel_data <- reactive({
+    # If we have dates selected and user clicked a day, show day-specific recommendations
     dates <- selected_dates()
-    if (length(dates) >= day) {
-      date <- dates[day]
+    if (length(dates) > 0 && !showing_default_recommendations()) {
+      day <- clicked_day()
+      cat("Carousel data requested for day:", day, "\n")
       
-      # Use stored activities instead of re-fetching
-      activities <- if (length(itinerary_data$activities) >= day) {
-        itinerary_data$activities[[day]]
-      } else {
-        list()
-      }
-      
-      cat("Activities found:", length(activities), "\n")
-      
-      if (length(activities) > 0) {
-        # Get the main activity for that day
-        main_activity <- activities[[1]]$name
-        cat("Main activity:", main_activity, "\n")
+      if (length(dates) >= day) {
+        date <- dates[day]
         
-        # Find the main activity in theme_data to get its actual details
-        main_activity_info <- theme_data %>%
-          filter(Name == main_activity) %>%
-          head(1)
-        
-        if (nrow(main_activity_info) > 0) {
-          cat("Found main activity in theme_data:", main_activity_info$Theme, "-", main_activity_info$Sub_Theme, "\n")
-          
-          # Find related places based on the actual activity's theme and sub-theme
-          related_places <- theme_data %>%
-            filter(Name != main_activity) %>%
-            # Match by same theme or sub-theme for more relevant results
-            filter(
-              Theme == main_activity_info$Theme |
-                Sub_Theme == main_activity_info$Sub_Theme
-            ) %>%
-            head(9)
-          
+        # Use stored activities instead of re-fetching
+        activities <- if (length(itinerary_data$activities) >= day) {
+          itinerary_data$activities[[day]]
         } else {
-          # Fallback: use activity-based matching with BETTER logic
-          cat("Main activity not found in theme_data, using activity-based matching\n")
-          activity_theme <- get_activity_theme(main_activity)
-          cat("Guessed theme:", activity_theme, "\n")
+          list()
+        }
+        
+        cat("Activities found:", length(activities), "\n")
+        
+        if (length(activities) > 0) {
+          # Get the main activity for that day
+          main_activity <- activities[[1]]$name
+          cat("Main activity:", main_activity, "\n")
           
-          # For food/drink activities, show other food/drink places, not shopping
-          related_places <- theme_data %>%
-            filter(Name != main_activity) %>%
-            filter(Theme == activity_theme) %>%
-            head(9)
+          # Find the main activity in theme_data to get its actual details
+          main_activity_info <- theme_data %>%
+            filter(Name == main_activity) %>%
+            head(1)
+          
+          if (nrow(main_activity_info) > 0) {
+            cat("Found main activity in theme_data:", main_activity_info$Theme, "-", main_activity_info$Sub_Theme, "\n")
+            
+            # Find related places based on the actual activity's theme and sub-theme
+            related_places <- theme_data %>%
+              filter(Name != main_activity) %>%
+              # Match by same theme or sub-theme for more relevant results
+              filter(
+                Theme == main_activity_info$Theme |
+                  Sub_Theme == main_activity_info$Sub_Theme
+              ) %>%
+              head(9)
+            
+          } else {
+            # Fallback: use activity-based matching with BETTER logic
+            cat("Main activity not found in theme_data, using activity-based matching\n")
+            activity_theme <- get_activity_theme(main_activity)
+            cat("Guessed theme:", activity_theme, "\n")
+            
+            # For food/drink activities, show other food/drink places, not shopping
+            related_places <- theme_data %>%
+              filter(Name != main_activity) %>%
+              filter(Theme == activity_theme) %>%
+              head(9)
+          }
+          
+          cat("Related places found:", nrow(related_places), "\n")
+          if (nrow(related_places) > 0) {
+            cat("Sample related place:", related_places$Name[1], "-", related_places$Theme[1], "\n")
+          }
+          
+          return(list(
+            main_activity = main_activity,
+            related_places = related_places,
+            date = date,
+            day_name = format(date, "%A"),
+            is_default = FALSE
+          ))
         }
-        
-        cat("Related places found:", nrow(related_places), "\n")
-        if (nrow(related_places) > 0) {
-          cat("Sample related place:", related_places$Name[1], "-", related_places$Theme[1], "\n")
-        }
-        
-        return(list(
-          main_activity = main_activity,
-          related_places = related_places,
-          date = date,
-          day_name = format(date, "%A")
-        ))
       }
     }
-    return(NULL)
+    
+    # DEFAULT RECOMMENDATIONS: Show when no itinerary or no activities
+    cat("Showing default recommendations\n")
+    default_places <- get_default_recommendations()
+    
+    return(list(
+      main_activity = "Popular Melbourne Destinations",
+      related_places = default_places,
+      date = NULL,
+      day_name = "Today",
+      is_default = TRUE
+    ))
   })
   
   # Get theme for an activity - IMPROVED matching
@@ -250,10 +315,15 @@ summary_server <- function(input, output, session, user_behavior, weather_module
   # Carousel page management (each page shows 3 items)
   carousel_page <- reactiveVal(1)
   
-  # Reset carousel when new day is clicked
+  # Reset carousel when new day is clicked or when switching to default
   observeEvent(clicked_day(), {
     carousel_page(1)
     cat("Carousel page reset to 1\n")
+  })
+  
+  observeEvent(showing_default_recommendations(), {
+    carousel_page(1)
+    cat("Carousel page reset to 1 (default mode change)\n")
   })
   
   # Calculate total pages
@@ -292,23 +362,21 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     }
   })
   
-  # Carousel output - NOW SHOWS 3 ITEMS PER PAGE
+  # Carousel output - ALWAYS SHOWS CONTENT
   output$activity_carousel <- renderUI({
     data <- carousel_data()
     
-    if (is.null(data)) {
+    if (is.null(data) || nrow(data$related_places) == 0) {
       return(div(
         class = "carousel-placeholder",
-        h4("✨ Discover Related Places"),
-        p("Click on any day in your itinerary to see places related to that day's main activity!")
-      ))
-    }
-    
-    if (nrow(data$related_places) == 0) {
-      return(div(
-        class = "no-related-places",
-        h4("No related places found"),
-        p("We couldn't find any related places for:", strong(data$main_activity))
+        h4("🎯 Discover Your Perfect Melbourne Experience"),
+        p("Click on any day in your itinerary above to see personalized recommendations!"),
+        p("Don't see any activities? Start by:"),
+        tags$ul(
+          tags$li("Exploring categories that interest you"),
+          tags$li("Selecting your travel dates in the Weather tab"),
+          tags$li("Building your preferences to get tailored suggestions")
+        )
       ))
     }
     
@@ -316,11 +384,25 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     current_page <- carousel_page()
     total_pages_val <- total_pages()
     
+    # Different header based on whether we're showing default or day-specific recommendations
+    header_text <- if (data$is_default) {
+      "✨ Popular Melbourne Destinations"
+    } else {
+      paste("More recommendations for", data$day_name, format(data$date, "%d %B"))
+    }
+    
+    subtitle_text <- if (data$is_default) {
+      "Select dates in the Weather tab to get personalized daily recommendations"
+    } else {
+      paste("Similar places to:", data$main_activity)
+    }
+    
     tagList(
-      # Simple header showing what day was clicked
+      # Header with conditional text
       div(
         class = "carousel-header",
-        h4("💫 ", format(data$date, "%A"), " - ", format(data$date, "%d %B"))
+        h4(header_text),
+        p(subtitle_text, style = "margin: 5px 0 0 0; color: #666; font-size: 1rem;")
       ),
       
       # The carousel itself with 3 items
@@ -359,76 +441,26 @@ summary_server <- function(input, output, session, user_behavior, weather_module
           })
         ),
         
-        # Simple navigation
-        div(
-          class = "carousel-nav",
-          actionButton("carousel_prev", "◀ Previous", 
-                       class = "carousel-nav-button",
-                       disabled = current_page == 1),
-          span(class = "carousel-page-info",
-               paste(current_page, "of", total_pages_val)),
-          actionButton("carousel_next", "Next ▶", 
-                       class = "carousel-nav-button",
-                       disabled = current_page == total_pages_val)
-        )
+        # Simple navigation (only show if we have multiple pages)
+        if (total_pages_val > 1) {
+          div(
+            class = "carousel-nav",
+            actionButton("carousel_prev", "◀ Previous", 
+                         class = "carousel-nav-button",
+                         disabled = current_page == 1),
+            span(class = "carousel-page-info",
+                 paste(current_page, "of", total_pages_val)),
+            actionButton("carousel_next", "Next ▶", 
+                         class = "carousel-nav-button",
+                         disabled = current_page == total_pages_val)
+          )
+        }
       )
     )
   })
   
-  # Helper function for theme emojis
-  get_theme_emoji <- function(theme) {
-    emoji_map <- list(
-      "Food & Drink" = "🍽️",
-      "Parks & Gardens" = "🌳",
-      "Arts & Culture" = "🎨",
-      "Shopping" = "🛍️",
-      "Attractions" = "🏛️",
-      "Leisure" = "🎯",
-      "Heritage" = "🏰",
-      "Markets" = "🛒",
-      "Entertainment" = "🎭"
-    )
-    return(emoji_map[[theme]] %||% "📍")
-  }
-  
-  # Generate fun facts based on place type
-  generate_fun_fact <- function(place) {
-    facts <- list(
-      "Food & Drink" = c(
-        "💡 Local tip: Try their signature coffee blend!",
-        "🍴 Popular dish: Ask for the daily special",
-        "⏰ Best time: Avoid lunch rush at 12:30-1:30pm",
-        "🌟 Hidden gem: Locals love their breakfast menu"
-      ),
-      "Parks & Gardens" = c(
-        "🌼 Perfect for: Picnics and morning walks",
-        "📸 Photo spot: Great for landscape photography",
-        "🕊️ Wildlife: Look out for local bird species",
-        "🌅 Best time: Golden hour for amazing photos"
-      ),
-      "Arts & Culture" = c(
-        "🎭 Insider tip: Check for free guided tours",
-        "📅 Current exhibit: Ask about temporary displays",
-        "🖼️ Don't miss: The main gallery collection",
-        "🎨 Local artists: Support local talent in gift shop"
-      ),
-      "Shopping" = c(
-        "🛍️ Best finds: Look for local designer items",
-        "💫 Hidden gems: Explore the smaller boutiques",
-        "🕒 Quiet times: Weekday mornings are less crowded",
-        "🎁 Souvenirs: Perfect for unique Melbourne gifts"
-      )
-    )
-    
-    theme_facts <- facts[[place$Theme]] %||% c(
-      "🌟 Local favorite worth exploring!",
-      "📅 Check online for current events",
-      "💬 Visitors recommend planning 1-2 hours",
-      "✨ Great spot to experience local culture"
-    )
-    
-    return(sample(theme_facts, 1))
-  }
+  # [Rest of your existing functions remain the same]
+  # ... include all your existing helper functions here without changes ...
   
   get_activities_for_date <- function(date, user_behavior) {
     activities <- list()
@@ -440,7 +472,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
         manual_activities <- weather_module$get_activities_for_date(date)
       }
       
-      # If user has manually selected activities, use those INSTEAD of personality recommendations
+      # If user has manually selected activities, use those directly
       if (length(manual_activities) > 0) {
         cat("Using manually selected activities for", as.character(date), "\n")
         return(manual_activities)
@@ -450,116 +482,133 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       day_of_week <- weekdays(date)
       weather <- get_weather_for_date_safe(date)
       
-      # personality data retrieval
-      personality_info <- personality_data()
-      personality <- if (!is.null(personality_info) && !is.null(personality_info$type)) {
-        personality_info$type
-      } else {
-        "Melbourne Explorer"
+      # SIMPLE WEATHER CHECK with proper null checking
+      is_bad_weather <- FALSE
+      if (!is.null(weather$rain) && !is.na(weather$rain) && weather$rain > 5) {
+        is_bad_weather = TRUE
+        cat("Rainy day detected - avoiding outdoor activities\n")
+      } else if (!is.null(weather$emoji) && !is.na(weather$emoji) && grepl("🌧|⛈|🌦", weather$emoji)) {
+        is_bad_weather = TRUE
+        cat("Rainy weather emoji detected - avoiding outdoor activities\n")
       }
       
-      # Check if user has any clicks at all
+      # personality data retrieval with proper null checking
+      personality_info <- personality_data()
+      personality <- "Melbourne Explorer"  # default
+      if (!is.null(personality_info) && !is.null(personality_info$type)) {
+        personality <- personality_info$type
+      }
+      
+      # Check if user has any clicks at all with proper null checking
       total_clicks <- 0
       if (!is.null(user_behavior) && !is.null(user_behavior$category_clicks)) {
         total_clicks <- sum(unlist(user_behavior$category_clicks), na.rm = TRUE)
       }
       
-      # If user has no clicks, use DEFAULT activities from theme_data
+      # ALWAYS get some activities - start with base query
+      base_activities <- theme_data %>%
+        filter(!Theme %in% c("Public Services", "Health Services", "Transport")) %>%
+        filter(!grepl("hospital|clinic|police|fire station", Name, ignore.case = TRUE)) %>%
+        distinct(Name, .keep_all = TRUE)
+      
+      # Safety check - if base_activities is empty, use fallback
+      if (nrow(base_activities) == 0) {
+        cat("No base activities found, using fallback\n")
+        return(get_fallback_activities())
+      }
+      
+      # If user has no clicks, use DEFAULT activities
       if (total_clicks == 0) {
-        cat("No user data - using DEFAULT recommendations from theme_data for", as.character(date), "\n")
+        cat("No user data - using DEFAULT recommendations for", as.character(date), "\n")
         
-        # Get diverse activities from theme_data (no museums/hospitals/police stations)
-        default_activities <- theme_data %>%
-          filter(!Theme %in% c("Public Services", "Health Services", "Transport")) %>%
-          filter(!grepl("museum|gallery|hospital|clinic|police|fire station", Name, ignore.case = TRUE)) %>%
-          distinct(Name, .keep_all = TRUE) %>%
-          sample_n(min(10, nrow(.)))  # Get 10 random diverse activities
+        # Apply weather filter if needed
+        if (is_bad_weather) {
+          base_activities <- base_activities %>%
+            filter(!grepl("barbecue|bbq|picnic|hiking|climbing|swimming|beach", Name, ignore.case = TRUE))
+        }
         
-        # Select 3 based on date for variety
-        date_num <- as.numeric(date) %% nrow(default_activities)
-        start_idx <- (date_num %% (nrow(default_activities) - 2)) + 1
-        selected_places <- default_activities[start_idx:min(start_idx + 2, nrow(default_activities)), ]
+        selected_places <- base_activities %>% 
+          sample_n(min(3, nrow(.)))
         
       } else {
-        # USER HAS DATA - Personality-based recommendations USING REAL theme_data
+        # USER HAS DATA - Personality-based recommendations
         cat("Using personality-based recommendations for", as.character(date), "\n")
         cat("Personality detected:", personality, "\n")
         
-        # Use actual theme_data
-        all_places <- theme_data %>%
-          distinct(Name, .keep_all = TRUE)
-        
-        # Filter by personality type with date-based variation
-        date_index <- which(selected_dates() == date)
+        # Filter by personality type with proper error handling
+        personality_places <- base_activities
         
         if (personality == "Urban Adventurer") {
-          cat("Selecting urban activities for Urban Adventurer\n")
-          selected_places <- all_places %>%
-            filter(Theme %in% c("Attractions", "Shopping", "Food & Drink", "Arts & Culture", "Entertainment")) %>%
-            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
-            sample_n(min(3, nrow(.)))
-          
+          personality_places <- base_activities %>%
+            filter(Theme %in% c("Attractions", "Shopping", "Food & Drink", "Arts & Culture", "Entertainment"))
         } else if (personality == "Practical Traveler") {
-          cat("Selecting practical activities for Practical Traveler\n")
-          selected_places <- all_places %>%
-            filter(Theme %in% c("Shopping", "Food & Drink", "Attractions", "Transport", "Markets")) %>%
-            filter(!grepl("fire station|police station|hospital|clinic|bus stop|train station", 
-                          Name, ignore.case = TRUE)) %>%
-            sample_n(min(3, nrow(.)))
-          
+          personality_places <- base_activities %>%
+            filter(Theme %in% c("Shopping", "Food & Drink", "Attractions", "Transport", "Markets"))
         } else if (personality == "Wellness Seeker") {
-          cat("Selecting wellness activities for Wellness Seeker\n")
-          selected_places <- all_places %>%
-            filter(Theme %in% c("Leisure", "Parks & Gardens", "Food & Drink", "Attractions")) %>%
-            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
-            sample_n(min(3, nrow(.)))
-          
+          personality_places <- base_activities %>%
+            filter(Theme %in% c("Leisure", "Parks & Gardens", "Food & Drink", "Attractions"))
         } else if (personality == "Melbourne Explorer") {
-          cat("Selecting diverse activities for Melbourne Explorer\n")
-          selected_places <- all_places %>%
+          personality_places <- base_activities %>%
             filter(Theme %in% c("Arts & Culture", "Attractions", "Food & Drink", "Parks & Gardens", 
-                                "Shopping", "Leisure", "Heritage", "Markets", "Entertainment")) %>%
-            filter(!Theme %in% c("Transport", "Public Services", "Health Services")) %>%
-            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
-            sample_n(min(3, nrow(.)))
-          
+                                "Shopping", "Leisure", "Heritage", "Markets", "Entertainment"))
         } else if (personality == "Food Lover") {
-          cat("Selecting food activities for Food Lover\n")
-          selected_places <- all_places %>%
-            filter(Theme == "Food & Drink") %>%
-            sample_n(min(3, nrow(.)))
-          
+          personality_places <- base_activities %>%
+            filter(Theme == "Food & Drink")
         } else if (personality == "Nature Enthusiast") {
-          cat("Selecting outdoor activities for Nature Enthusiast\n")
-          selected_places <- all_places %>%
-            filter(Theme %in% c("Parks & Gardens", "Attractions", "Leisure")) %>%
-            sample_n(min(3, nrow(.)))
-          
+          personality_places <- base_activities %>%
+            filter(Theme %in% c("Parks & Gardens", "Attractions", "Leisure"))
         } else if (personality == "Culture Connoisseur") {
-          cat("Selecting culture activities for Culture Connoisseur\n")
-          selected_places <- all_places %>%
-            filter(Theme %in% c("Arts & Culture", "Heritage", "Attractions")) %>%
-            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
-            sample_n(min(3, nrow(.)))
-          
+          personality_places <- base_activities %>%
+            filter(Theme %in% c("Arts & Culture", "Heritage", "Attractions"))
+        }
+        # else use default base_activities
+        
+        # Apply weather filter if needed
+        if (is_bad_weather) {
+          personality_places <- personality_places %>%
+            filter(!grepl("barbecue|bbq|picnic|hiking|climbing|swimming|beach", Name, ignore.case = TRUE))
+        }
+        
+        # ALWAYS get at least 3 places
+        if (nrow(personality_places) >= 3) {
+          selected_places <- personality_places %>% sample_n(min(3, nrow(.)))
         } else {
-          # Default for any other personality - safe tourist attractions only
-          cat("Selecting safe default activities for", personality, "\n")
-          selected_places <- all_places %>%
-            filter(Theme %in% c("Arts & Culture", "Attractions", "Food & Drink", "Parks & Gardens", "Shopping")) %>%
-            filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
-            sample_n(min(3, nrow(.)))
+          cat("Not enough personality matches, supplementing with random activities\n")
+          # Get what we can from personality matches
+          personality_selected <- personality_places
+          # Get remaining from base activities
+          remaining_needed <- max(0, 3 - nrow(personality_selected))
+          if (remaining_needed > 0) {
+            supplemental_places <- base_activities %>%
+              filter(!Name %in% personality_selected$Name) %>%
+              sample_n(min(remaining_needed, nrow(.)))
+            selected_places <- bind_rows(personality_selected, supplemental_places)
+          } else {
+            selected_places <- personality_selected
+          }
+        }
+      }
+      
+      # FINAL SAFETY CHECK: If we still don't have 3 activities, get ANY random activities
+      if (nrow(selected_places) < 3) {
+        cat("Still not enough activities, getting random fallbacks\n")
+        needed <- max(0, 3 - nrow(selected_places))
+        if (needed > 0) {
+          fallback_places <- base_activities %>%
+            filter(!Name %in% selected_places$Name) %>%
+            sample_n(min(needed, nrow(.)))
+          selected_places <- bind_rows(selected_places, fallback_places)
         }
       }
       
       # Convert selected places to activities
       if (nrow(selected_places) > 0) {
-        activities <- lapply(1:nrow(selected_places), function(i) {
+        activities <- lapply(1:min(3, nrow(selected_places)), function(i) {
           place <- selected_places[i, ]
           
-          place_name <- if (!is.null(place$Name)) place$Name else "Melbourne Activity"
-          place_subtheme <- if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
-          place_rating <- if (!is.null(place$Google_Rating)) place$Google_Rating else NA
+          place_name <- if (!is.null(place$Name) && !is.na(place$Name)) place$Name else "Melbourne Activity"
+          place_subtheme <- if (!is.null(place$Sub_Theme) && !is.na(place$Sub_Theme)) place$Sub_Theme else "Activity"
+          place_rating <- if (!is.null(place$Google_Rating) && !is.na(place$Google_Rating)) place$Google_Rating else NA
           
           # Create appropriate time slots based on place type and operating hours
           time_slot <- generate_time_slot(place, i)
@@ -578,35 +627,39 @@ summary_server <- function(input, output, session, user_behavior, weather_module
         })
       }
       
+      cat("Final activities count:", length(activities), "\n")
       return(activities)
       
     }, error = function(e) {
       cat("ERROR in get_activities_for_date:", e$message, "\n")
-      cat("Date:", as.character(date), "Personality:", personality, "\n")
-      
-      # Fallback: get any 2 random activities from theme_data
-      fallback_activities <- theme_data %>%
-        filter(!Theme %in% c("Public Services", "Health Services")) %>%
-        distinct(Name, .keep_all = TRUE) %>%
-        sample_n(min(2, nrow(.)))
-      
-      if (nrow(fallback_activities) > 0) {
-        return(lapply(1:nrow(fallback_activities), function(i) {
-          place <- fallback_activities[i, ]
-          list(
-            name = place$Name,
-            time = "10:00 AM - 5:00 PM",
-            location = if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
-          )
-        }))
-      } else {
-        # Ultimate fallback if theme_data is empty
-        return(list(
-          list(name = "Royal Botanic Gardens", time = "10:00 AM - 5:00 PM", location = "Park"),
-          list(name = "Queen Victoria Market", time = "9:00 AM - 2:00 PM", location = "Market")
-        ))
-      }
+      return(get_fallback_activities())
     })
+  }
+  
+  # Helper function for fallback activities
+  get_fallback_activities <- function() {
+    fallback_activities <- theme_data %>%
+      filter(!Theme %in% c("Public Services", "Health Services")) %>%
+      distinct(Name, .keep_all = TRUE) %>%
+      sample_n(min(3, nrow(.)))
+    
+    if (nrow(fallback_activities) > 0) {
+      return(lapply(1:nrow(fallback_activities), function(i) {
+        place <- fallback_activities[i, ]
+        list(
+          name = place$Name,
+          time = "10:00 AM - 5:00 PM",
+          location = if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
+        )
+      }))
+    } else {
+      # HARDCODED FALLBACK if everything fails
+      return(list(
+        list(name = "Royal Botanic Gardens", time = "10:00 AM - 5:00 PM", location = "Park"),
+        list(name = "Queen Victoria Market", time = "9:00 AM - 2:00 PM", location = "Market"),
+        list(name = "Federation Square", time = "All Day", location = "Landmark")
+      ))
+    }
   }
   
   # Helper function to generate time slots based on place type and operating hours
@@ -750,7 +803,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
   output$personality_title <- renderText({
     data <- personality_data()
     if (is.null(data)) return("You are a Melbourne Explorer!")
-    paste("Based on your searches you are a", data$type, "!")
+    paste("You are a", data$type, "!")
   })
   
   output$personality_icon <- renderUI({
