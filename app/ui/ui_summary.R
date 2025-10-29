@@ -294,6 +294,13 @@ div(
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#summary-tab-content .carousel-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.15);
 }
 
 #summary-tab-content .carousel-item h5 {
@@ -330,6 +337,28 @@ div(
   font-size: 1rem; /* Bigger font */
   line-height: 1.4;
   margin-top: auto; /* Push to bottom */
+}
+
+/* Primary recommendation styling in carousel */
+#summary-tab-content .carousel-item.primary-recommendation {
+  border: 2px solid #036B55;
+  background: linear-gradient(135deg, #f0f7f4 0%, #e8f4f0 100%);
+  position: relative;
+}
+
+#summary-tab-content .carousel-item.primary-recommendation:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #036B55, #028476);
+}
+
+#summary-tab-content .carousel-item.primary-recommendation:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 12px 20px rgba(3, 107, 85, 0.2);
 }
 
 /* DAY HIGHLIGHTING - SINGLE BOX AROUND COLUMN */
@@ -597,6 +626,19 @@ div(
         var dayIndex = $(this).data('day');
         console.log('Day clicked:', dayIndex);
         Shiny.setInputValue('day_clicked', dayIndex);
+      });
+      
+      $(document).on('click', '.carousel-item', function() {
+        var placeName = $(this).data('place-name');
+        var isPrimary = $(this).data('is-primary');
+        console.log('Carousel item clicked:', placeName, 'Primary:', isPrimary);
+        
+        // Set Shiny input for map integration
+        Shiny.setInputValue('carousel_place_clicked', {
+          name: placeName,
+          is_primary: isPrimary,
+          timestamp: new Date().getTime()
+        });
       });
     "
       )
