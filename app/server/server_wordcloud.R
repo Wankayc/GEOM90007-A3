@@ -77,7 +77,13 @@ observeEvent(input$mainCloudViz_mark_selection_changed, {
 observeEvent(input$themeSingle, {
   req(input$themeSingle)
   
-  # Personality tracking
+  # Skip personality tracking on first load
+  if (exists("user_behavior") && !is.null(user_behavior) && isTRUE(user_behavior$first_load)) {
+    user_behavior$first_load <- FALSE
+    return()
+  }
+  
+  # --------- Personality tracking ----------
   # This covers both direct radio button clicks AND wordcloud clicks that update radios
   category_mapping <- list(
     "Accommodation" = "accommodation",

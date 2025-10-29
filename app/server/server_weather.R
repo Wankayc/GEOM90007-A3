@@ -10,6 +10,7 @@ library(shinyWidgets)
 library(sortable)
 
 
+
 # Summarise metrics for a selected period
 summarise_period_box <- function(feed, start_date, end_date) {
   d <- feed |> filter(date >= start_date, date <= end_date)
@@ -293,7 +294,15 @@ trip_tab_server <- function(id) {
       req(input$range)
       rng <- as.Date(input$range)
       validate(need(diff(rng) <= 6, "You can select up to 7 days."))
-      seq(rng[1], rng[2], by = "day")
+      dates <- seq(rng[1], rng[2], by = "day")
+      
+      # Update the session data for summary tab
+      session$userData$weather_dates <- dates
+      if (!is.null(session$parent)) {
+        session$parent$userData$weather_dates <- dates
+      }
+      
+      dates
     })
     
     # Daily weather info
@@ -318,17 +327,6 @@ trip_tab_server <- function(id) {
         ) |>
         select(date, weather, temp, pm25, air)
     })
-    
-    weather_emoji <- function(rain, tmax){
-      if (!is.na(rain) && rain >= 1) return("🌧️")
-      if (!is.na(tmax) && tmax >= 25) return("☀️")
-      "⛅️"
-    }
-    weather_label <- function(rain, tmax){
-      if (!is.na(rain) && rain >= 1) return("Rainy")
-      if (!is.na(tmax) && tmax >= 25) return("Sunny")
-      "Cloudy"
-    }
     
     air_badge <- function(a) c(good="🟢", moderate="🟡", poor="🔴")[a]
     
@@ -440,6 +438,7 @@ trip_tab_server <- function(id) {
       div(class="itinerary-row",
           lapply(ds, function(d){
             row <- calendar_feed |> dplyr::filter(date == d) |> dplyr::slice(1)
+            # NOW USES SHARED FUNCTIONS
             wx_ico <- if (nrow(row)) weather_emoji(row$rain, row$tmax) else "⛅️"
             wx_txt <- if (nrow(row)) weather_label(row$rain, row$tmax) else "Cloudy"
             
@@ -558,5 +557,83 @@ trip_tab_server <- function(id) {
         })
       })
     })
+    
+    # Return reactive values for external access
+    return(
+      list(
+        selected_dates = reactive(sel_dates()),
+        # NEW: Get activities for a specific date using theme_data
+        get_activities_for_date = function(date) {
+          date_str <- as.character(date)
+          input_id <- paste0("board_", date_str)
+          activity_labels <- input[[input_id]] %||% character(0)
+          
+          if (length(activity_labels) > 0) {
+            # Map activity labels to theme_data categories
+            activity_to_theme <- list(
+              "🏛️ museum" = c("Arts & Culture", "Heritage"),
+              "🖼️ exhibition" = c("Arts & Culture"),
+              "☕️ cafe & restaurant" = c("Food & Drink"),
+              "🍖 barbecue" = c("Leisure", "Parks & Gardens"),
+              "🥾 hiking" = c("Parks & Gardens", "Leisure"),
+              "🧺 picnic" = c("Parks & Gardens", "Leisure"),
+              "🧗 climbing" = c("Leisure", "Sports"),
+              "🏊️ swimming" = c("Leisure", "Sports")
+            )
+            
+            # Get all relevant themes for the selected activities
+            relevant_themes <- unique(unlist(activity_to_theme[activity_labels]))
+            
+            if (length(relevant_themes) > 0) {
+              # Find matching places from theme_data
+              matching_places <- theme_data %>%
+                filter(Theme %in% relevant_themes) %>%
+                distinct(Name, .keep_all = TRUE) %>%
+                # Use date to create consistent but varied selection
+                slice_sample(n = min(3, nrow(.))) %>%
+                arrange(Name)
+              
+              # Convert to activity format
+              if (nrow(matching_places) > 0) {
+                activities <- lapply(1:nrow(matching_places), function(i) {
+                  place <- matching_places[i, ]
+                  
+                  place_name <- if (!is.null(place$Name)) place$Name else "Melbourne Activity"
+                  place_subtheme <- if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
+                  place_rating <- if (!is.null(place$Google_Rating)) place$Google_Rating else NA
+                  
+                  # Create appropriate time slots
+                  time_slots <- c("9:00 AM - 11:00 AM", "1:00 PM - 3:00 PM", "4:00 PM - 6:00 PM")
+                  time_slot <- time_slots[min(i, length(time_slots))]
+                  
+                  # Special timing for food places
+                  if (!is.null(place$Theme) && place$Theme == "Food & Drink") {
+                    if (grepl("cafe|coffee", place_subtheme, ignore.case = TRUE)) {
+                      time_slot <- if (i == 1) "9:00 AM - 11:00 AM" else "3:00 PM - 5:00 PM"
+                    } else {
+                      time_slot <- if (i == 1) "12:00 PM - 2:00 PM" else "6:00 PM - 8:00 PM"
+                    }
+                  }
+                  
+                  location_desc <- place_subtheme
+                  if (!is.na(place_rating)) {
+                    location_desc <- paste(location_desc, "•", paste("⭐", place_rating))
+                  }
+                  
+                  list(
+                    name = place_name,
+                    time = time_slot,
+                    location = location_desc
+                  )
+                })
+                return(activities)
+              }
+            }
+          }
+          
+          list() # Return empty list if no activities or no matches
+        }
+      )
+    )
   })
 }
