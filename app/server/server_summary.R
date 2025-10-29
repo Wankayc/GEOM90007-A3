@@ -140,35 +140,28 @@ summary_server <- function(input, output, session, user_behavior, weather_module
         total_clicks <- sum(unlist(user_behavior$category_clicks), na.rm = TRUE)
       }
       
-      # If user has no clicks, use HARDCODED default activities
+      # If user has no clicks, use DEFAULT activities from theme_data
       if (total_clicks == 0) {
-        cat("No user data - using HARDCODED recommendations for", as.character(date), "\n")
+        cat("No user data - using DEFAULT recommendations from theme_data for", as.character(date), "\n")
         
-        # HARDCODED DEFAULT ACTIVITIES - NO MUSEUMS!
-        default_activities <- list(
-          list(name = "Royal Botanic Gardens", time = "9:00 AM - 12:00 PM", location = "Park & Gardens"),
-          list(name = "Queen Victoria Market", time = "10:00 AM - 2:00 PM", location = "Market & Shopping"), 
-          list(name = "Eureka Skydeck", time = "1:00 PM - 3:00 PM", location = "Observation Deck"),
-          list(name = "Southbank Promenade", time = "4:00 PM - 7:00 PM", location = "Riverside Dining"),
-          list(name = "St Kilda Beach", time = "2:00 PM - 5:00 PM", location = "Beach & Pier"),
-          list(name = "Melbourne Zoo", time = "10:00 AM - 4:00 PM", location = "Wildlife Park"),
-          list(name = "Federation Square", time = "11:00 AM - 1:00 PM", location = "Public Square"),
-          list(name = "Lygon Street", time = "6:00 PM - 9:00 PM", location = "Italian Restaurants"),
-          list(name = "Chinatown", time = "12:00 PM - 2:00 PM", location = "Asian Cuisine"),
-          list(name = "Docklands", time = "3:00 PM - 6:00 PM", location = "Waterfront Area")
-        )
+        # Get diverse activities from theme_data (no museums/hospitals/police stations)
+        default_activities <- theme_data %>%
+          filter(!Theme %in% c("Public Services", "Health Services", "Transport")) %>%
+          filter(!grepl("museum|gallery|hospital|clinic|police|fire station", Name, ignore.case = TRUE)) %>%
+          distinct(Name, .keep_all = TRUE) %>%
+          sample_n(min(10, nrow(.)))  # Get 10 random diverse activities
         
         # Select 3 based on date for variety
-        date_num <- as.numeric(date) %% length(default_activities)
-        start_idx <- (date_num %% (length(default_activities) - 2)) + 1
-        activities <- default_activities[start_idx:(start_idx + 2)]
+        date_num <- as.numeric(date) %% nrow(default_activities)
+        start_idx <- (date_num %% (nrow(default_activities) - 2)) + 1
+        selected_places <- default_activities[start_idx:min(start_idx + 2, nrow(default_activities)), ]
         
       } else {
-        # USER HAS DATA - Personality-based recommendations USING ACTUAL THEME_DATA
+        # USER HAS DATA - Personality-based recommendations USING REAL theme_data
         cat("Using personality-based recommendations for", as.character(date), "\n")
         cat("Personality detected:", personality, "\n")
         
-        # Use actual theme_data instead of hardcoded values
+        # Use actual theme_data
         all_places <- theme_data %>%
           distinct(Name, .keep_all = TRUE)
         
@@ -233,43 +226,32 @@ summary_server <- function(input, output, session, user_behavior, weather_module
             filter(!grepl("fire station|police station|hospital|clinic", Name, ignore.case = TRUE)) %>%
             sample_n(min(3, nrow(.)))
         }
-        
-        # Convert selected places to activities
-        if (nrow(selected_places) > 0) {
-          activities <- lapply(1:nrow(selected_places), function(i) {
-            place <- selected_places[i, ]
-            
-            place_name <- if (!is.null(place$Name)) place$Name else "Melbourne Activity"
-            place_subtheme <- if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
-            place_rating <- if (!is.null(place$Google_Rating)) place$Google_Rating else NA
-            
-            # Create appropriate time slots based on place type
-            if (!is.null(place$Theme) && place$Theme == "Food & Drink") {
-              if (grepl("cafe|coffee", place_subtheme, ignore.case = TRUE)) {
-                time_slot <- if (i == 1) "9:00 AM - 11:00 AM" else "3:00 PM - 5:00 PM"
-              } else {
-                time_slot <- if (i == 1) "12:00 PM - 2:00 PM" else "6:00 PM - 8:00 PM"
-              }
-            } else if (!is.null(place$Theme) && place$Theme == "Parks & Gardens") {
-              time_slot <- if (i == 1) "10:00 AM - 12:00 PM" else "2:00 PM - 4:00 PM"
-            } else {
-              time_slots <- c("10:00 AM - 12:00 PM", "1:00 PM - 3:00 PM", "4:00 PM - 6:00 PM")
-              time_slot <- time_slots[min(i, length(time_slots))]
-            }
-            
-            # Create location description
-            location_desc <- place_subtheme
-            if (!is.na(place_rating)) {
-              location_desc <- paste(location_desc, "•", paste("⭐", place_rating))
-            }
-            
-            list(
-              name = place_name,
-              time = time_slot,
-              location = location_desc
-            )
-          })
-        }
+      }
+      
+      # Convert selected places to activities
+      if (nrow(selected_places) > 0) {
+        activities <- lapply(1:nrow(selected_places), function(i) {
+          place <- selected_places[i, ]
+          
+          place_name <- if (!is.null(place$Name)) place$Name else "Melbourne Activity"
+          place_subtheme <- if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
+          place_rating <- if (!is.null(place$Google_Rating)) place$Google_Rating else NA
+          
+          # Create appropriate time slots based on place type and operating hours
+          time_slot <- generate_time_slot(place, i)
+          
+          # Create location description
+          location_desc <- place_subtheme
+          if (!is.na(place_rating)) {
+            location_desc <- paste(location_desc, "•", paste("⭐", round(place_rating, 1)))
+          }
+          
+          list(
+            name = place_name,
+            time = time_slot,
+            location = location_desc
+          )
+        })
       }
       
       return(activities)
@@ -277,12 +259,69 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     }, error = function(e) {
       cat("ERROR in get_activities_for_date:", e$message, "\n")
       cat("Date:", as.character(date), "Personality:", personality, "\n")
-      # Return guaranteed HARDCODED fallback activities
-      return(list(
-        list(name = "Royal Botanic Gardens", time = "10:00 AM - 5:00 PM", location = "Park"),
-        list(name = "Queen Victoria Market", time = "9:00 AM - 2:00 PM", location = "Market")
-      ))
+      
+      # Fallback: get any 2 random activities from theme_data
+      fallback_activities <- theme_data %>%
+        filter(!Theme %in% c("Public Services", "Health Services")) %>%
+        distinct(Name, .keep_all = TRUE) %>%
+        sample_n(min(2, nrow(.)))
+      
+      if (nrow(fallback_activities) > 0) {
+        return(lapply(1:nrow(fallback_activities), function(i) {
+          place <- fallback_activities[i, ]
+          list(
+            name = place$Name,
+            time = "10:00 AM - 5:00 PM",
+            location = if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
+          )
+        }))
+      } else {
+        # Ultimate fallback if theme_data is empty
+        return(list(
+          list(name = "Royal Botanic Gardens", time = "10:00 AM - 5:00 PM", location = "Park"),
+          list(name = "Queen Victoria Market", time = "9:00 AM - 2:00 PM", location = "Market")
+        ))
+      }
     })
+  }
+  
+  # Helper function to generate time slots based on place type and operating hours
+  generate_time_slot <- function(place, index) {
+    # Check if we have operating hours data
+    has_hours <- !is.null(place$opening_time) && !is.na(place$opening_time) && 
+      !is.null(place$closing_time) && !is.na(place$closing_time)
+    
+    if (has_hours) {
+      # Use actual operating hours if available
+      open_time <- format(strptime(place$opening_time, "%H:%M"), "%I:%M %p")
+      close_time <- format(strptime(place$closing_time, "%H:%M"), "%I:%M %p")
+      return(paste(open_time, "-", close_time))
+    }
+    
+    # Fallback to intelligent time slots based on place type
+    place_theme <- if (!is.null(place$Theme)) place$Theme else "Attractions"
+    place_subtheme <- if (!is.null(place$Sub_Theme)) place$Sub_Theme else ""
+    
+    if (place_theme == "Food & Drink") {
+      if (grepl("cafe|coffee|breakfast", place_subtheme, ignore.case = TRUE)) {
+        time_slots <- c("7:00 AM - 9:00 AM", "9:00 AM - 11:00 AM", "3:00 PM - 5:00 PM")
+      } else {
+        time_slots <- c("12:00 PM - 2:00 PM", "1:00 PM - 3:00 PM", "6:00 PM - 8:00 PM", "7:00 PM - 9:00 PM")
+      }
+    } else if (place_theme == "Parks & Gardens") {
+      time_slots <- c("6:00 AM - 9:00 AM", "10:00 AM - 12:00 PM", "2:00 PM - 4:00 PM", "4:00 PM - 6:00 PM")
+    } else if (place_theme %in% c("Arts & Culture", "Heritage")) {
+      time_slots <- c("10:00 AM - 12:00 PM", "11:00 AM - 1:00 PM", "2:00 PM - 4:00 PM", "3:00 PM - 5:00 PM")
+    } else if (place_theme == "Shopping" || place_theme == "Markets") {
+      time_slots <- c("9:00 AM - 11:00 AM", "10:00 AM - 12:00 PM", "2:00 PM - 4:00 PM", "3:00 PM - 5:00 PM")
+    } else {
+      # Default for attractions, leisure, etc.
+      time_slots <- c("10:00 AM - 12:00 PM", "1:00 PM - 3:00 PM", "4:00 PM - 6:00 PM")
+    }
+    
+    # Use index to pick different time slots for variety
+    time_slot <- time_slots[(index - 1) %% length(time_slots) + 1]
+    return(time_slot)
   }
   
   # Personality data with better validation
