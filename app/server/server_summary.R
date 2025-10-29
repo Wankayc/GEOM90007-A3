@@ -478,6 +478,12 @@ summary_server <- function(input, output, session, user_behavior, weather_module
               class = card_class,
               `data-place-name` = place$Name,
               `data-is-primary` = if (is_primary) "true" else "false",
+              onclick = sprintf(
+                "Shiny.setInputValue('carousel_place_clicked', {name: '%s', is_primary: %s}, {priority: 'event'})",
+                gsub("'", "\\\\'", place$Name),  # Escape single quotes
+                tolower(is_primary)
+              ),
+              style = "cursor: pointer;",  # Add pointer cursor to indicate clickability
               if (is_primary) {
                 div(style = "background: #036B55; color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; margin: -20px -20px 15px -20px; text-align: center; font-weight: 600; font-size: 0.9rem;",
                     "⭐ Your Itinerary Recommendation")
@@ -493,7 +499,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
               if (!is.null(place$Business_address) && !is.na(place$Business_address) && place$Business_address != "") {
                 div(class = "place-address", place$Business_address)
               },
-              # Add helpful tips section - UPDATED: Only show one tip with bigger font
+              # Add helpful tips section
               if (length(tips) > 0) {
                 div(
                   class = "place-tips",
@@ -618,24 +624,64 @@ summary_server <- function(input, output, session, user_behavior, weather_module
   observeEvent(input$carousel_place_clicked, {
     place_data <- input$carousel_place_clicked
     if (!is.null(place_data)) {
-      cat("Carousel place clicked:", place_data$name, "\n")
-      cat("Is primary recommendation:", place_data$is_primary, "\n")
+      place_name <- place_data$name
+      cat("Carousel place clicked:", place_name, "\n")
       
-      # Here you can add logic to:
-      # 1. Switch to the map tab
-      # 2. Highlight the selected place on the map
-      # 3. Show details about the place
+      # Find the place in theme_data to get its details
+      place_info <- theme_data %>%
+        filter(Name == place_name) %>%
+        head(1)
       
-      # Example implementation:
-      # updateTabsetPanel(session, "main_nav", "map_tab")
-      # session$userData$selected_place <- place_data$name
-      
-      showNotification(paste("Selected:", place_data$name), type = "message")
+      if (nrow(place_info) > 0) {
+        # Switch to map tab first
+        updateNavbarPage(session, 'nav', selected = 'Map')
+        
+        # Delay slightly to ensure map tab loads
+        shinyjs::delay(800, {
+          # Clear only the temporary highlight layer (not other layers)
+          google_map_update("google_map") %>%
+            clear_markers(layer_id = "carousel_highlight")
+          
+          # Prepare data for the single place
+          single_place_data <- data.frame(
+            name = place_info$Name,
+            lat = as.numeric(place_info$Latitude),
+            lng = as.numeric(place_info$Longitude)
+          )
+          
+          # ★ UPDATE MAP STATE VARIABLES - This is what you're missing
+          map_rv$current_display_data <- place_info  # Set current data to just this one place
+          map_rv$display_source <- "carousel"        # Set source to carousel
+          map_rv$filtered_places <- place_info       # Set filtered places
+          
+          cat("🗺️ Carousel: Set current_display_data to 1 location\n")
+          
+          # Add marker for ONLY this place as a temporary highlight
+          google_map_update("google_map") %>%
+            add_markers(
+              data = single_place_data,
+              lat = "lat",
+              lon = "lng",
+              id = "name",
+              layer_id = "carousel_highlight",  # Separate layer for highlights
+              update_map_view = TRUE  # Center map on this location
+            )
+          
+          showNotification(
+            paste0("Showing: ", place_name),
+            type = "message",
+            duration = 2
+          )
+        })
+      } else {
+        showNotification(
+          paste("Could not find location details for:", place_name),
+          type = "warning",
+          duration = 3
+        )
+      }
     }
   })
-  
-  # [Rest of your existing functions remain the same]
-  # ... include all your existing helper functions here without changes ...
   
   get_activities_for_date <- function(date, user_behavior) {
     activities <- list()
@@ -992,10 +1038,5 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     data <- personality_data()
     if (is.null(data)) return("Start clicking categories to discover your Melbourne personality!")
     data$description
-  })
-  
-  # Placeholder handlers
-  observeEvent(input$export_pdf, {
-    showNotification("PDF export will be implemented soon!", type = "message")
   })
 }

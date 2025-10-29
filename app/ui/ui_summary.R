@@ -22,7 +22,7 @@ div(
         font-weight: 600;
         font-size: 1.1rem;
         transition: all 0.3s ease;
-        margin: 10px 0; /* Reduced margin */
+        margin: 10px 0;
       }
       #summary-tab-content .export-button:hover {
         background-color: #024d3d;
@@ -95,18 +95,18 @@ div(
         border: 1px solid #dee2e6;
         border-radius: 15px;
         padding: 30px;
-        margin-bottom: 25px; /* Reduced margin */
+        margin-bottom: 25px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
       #summary-tab-content .itinerary-section h4 {
         font-weight: 600;
         margin-bottom: 25px;
         color: #343a40;
-        font-size: 1.8rem; /* Increased from 1.5rem */
+        font-size: 1.8rem;
         text-align: center;
       }
 
-      /* RESPONSIVE ITINERARY - SCALES BASED ON CONTENT */
+      /* Itinerary */
       #summary-tab-content .itinerary-scroll-container {
         width: 100%;
         overflow-x: auto;
@@ -117,17 +117,17 @@ div(
         min-height: 280px;
       }
 
-      /* Default table styling - SLIGHTLY SMALLER BASE FONT */
+      /* Default table styling */
       #summary-tab-content .itinerary-table.simplified {
         width: 100%;
         border-collapse: separate;
         border-spacing: 12px;
-        font-size: 1.15rem; /* Reduced from 1.3rem */
+        font-size: 1.15rem;
       }
 
-      /* Header styling - SLIGHTLY SMALLER */
+      /* Header styling */
       #summary-tab-content .itinerary-table.simplified th {
-        padding: 22px 18px; /* Slightly reduced padding */
+        padding: 22px 18px;
         text-align: center;
         background: #f8f9fa;
         border-bottom: 2px solid #dee2e6;
@@ -136,7 +136,7 @@ div(
         position: sticky;
         top: 0;
         z-index: 10;
-        font-size: 1.1rem; /* Reduced from 1.2rem */
+        font-size: 1.1rem;
       }
 
       /* Cell styling */
@@ -149,27 +149,27 @@ div(
         height: 200px;
       }
 
-      /* Weather and day styling - SLIGHTLY SMALLER */
+      /* Weather and day styling */
       #summary-tab-content .itinerary-table.simplified .weather-icon {
-        font-size: 2.2em; /* Reduced from 2.5em */
-        margin-bottom: 10px; /* Reduced from 12px */
+        font-size: 2.2em; 
+        margin-bottom: 10px; 
         color: #036B55;
       }
       #summary-tab-content .itinerary-table.simplified .day-date {
         font-weight: 700;
-        font-size: 1.2em; /* Reduced from 1.4em */
-        margin-bottom: 6px; /* Reduced from 8px */
+        font-size: 1.2em; 
+        margin-bottom: 6px;
         color: #036B55;
       }
       #summary-tab-content .itinerary-table.simplified .date-number {
-        font-size: 1.05em; /* Reduced from 1.2em */
+        font-size: 1.05em;
         color: #6c757d;
         font-weight: 500;
       }
 
-      /* Activity styling with SLIGHTLY SMALLER fonts */
+      /* Activity styling */
       #summary-tab-content .itinerary-table.simplified .top-activity {
-        padding: 18px 16px; /* Slightly reduced padding */
+        padding: 18px 16px; 
         background: #f0f7ff;
         border-radius: 10px;
         border-left: 4px solid #036B55;
@@ -182,26 +182,26 @@ div(
       }
       #summary-tab-content .itinerary-table.simplified .top-activity .event-title {
         font-weight: 700;
-        font-size: 1.15em; /* Reduced from 1.3em */
-        margin-bottom: 10px; /* Reduced from 12px */
+        font-size: 1.15em; 
+        margin-bottom: 10px;
         color: #036B55;
         line-height: 1.3;
       }
       #summary-tab-content .itinerary-table.simplified .top-activity .event-time {
-        font-size: 1.05em; /* Reduced from 1.2em */
+        font-size: 1.05em;
         color: #666;
-        margin-bottom: 8px; /* Reduced from 10px */
+        margin-bottom: 8px;
         font-weight: 600;
       }
       #summary-tab-content .itinerary-table.simplified .top-activity .event-location {
-        font-size: 1em; /* Reduced from 1.1em */
+        font-size: 1em;
         color: #888;
         line-height: 1.4;
       }
       #summary-tab-content .itinerary-table.simplified .no-activities {
         padding: 40px 20px;
         text-align: center;
-        font-size: 1.1rem; /* Reduced from 1.2rem */
+        font-size: 1.1rem; 
         color: #999;
         font-style: italic;
       }
@@ -249,7 +249,7 @@ div(
         transform: translateY(0);
       }
 
-      /* MINIMALISTIC CAROUSEL - CLEAN AND DISTINCT WITH BIGGER FONTS */
+      /* Carousel styling */
       #summary-tab-content .carousel-section {
         margin-bottom: 20px; /* Reduced margin */
       }
@@ -266,11 +266,10 @@ div(
       #summary-tab-content .carousel-header h4 {
         color: #036B55;
         margin: 0;
-        font-size: 2rem; /* Increased from 1.8rem */
+        font-size: 2rem;
         font-weight: 600;
       }
-
-      /* REMOVED CAROUSEL HEADER SUBTITLE STYLING */
+      
       #summary-tab-content .carousel-header p {
         display: none; /* Hide the subtitle */
       }
@@ -280,21 +279,21 @@ div(
         border: 1px solid #e9ecef;
         border-radius: 10px;
         padding: 20px;
-        min-height: 350px; /* Taller container for bigger text */
+        min-height: 350px;
       }
 
       #summary-tab-content .carousel-items-container {
         display: flex;
         gap: 15px;
         margin-bottom: 20px;
-        min-height: 270px; /* Taller for bigger content */
+        min-height: 270px;
       }
 
       #summary-tab-content .carousel-item {
         flex: 1;
         background: #f8f9fa;
         border-radius: 8px;
-        padding: 20px; /* More padding */
+        padding: 20px; 
         border: 1px solid #e9ecef;
         text-align: left;
         display: flex;
@@ -302,7 +301,7 @@ div(
         justify-content: flex-start;
         cursor: pointer;
         transition: all 0.3s ease;
-        min-height: 280px; /* Taller for bigger text */
+        min-height: 280px;
       }
 
       #summary-tab-content .carousel-item:hover {
@@ -310,44 +309,44 @@ div(
         box-shadow: 0 8px 16px rgba(0,0,0,0.15);
       }
 
-      /* CAROUSEL CARD TEXT - MUCH BIGGER */
+      /* Carousel card */
       #summary-tab-content .carousel-item h5 {
         color: #036B55;
-        margin: 0 0 15px 0; /* Increased from 12px */
-        font-size: 1.7rem; /* Increased from 1.5rem */
+        margin: 0 0 15px 0; 
+        font-size: 1.7rem; 
         font-weight: 600;
         line-height: 1.3;
       }
 
       #summary-tab-content .carousel-item .place-category {
         color: #666;
-        font-size: 1.5rem; /* Increased from 1.3rem */
-        margin-bottom: 15px; /* Increased from 12px */
+        font-size: 1.5rem;
+        margin-bottom: 15px; 
         font-weight: 500;
       }
 
       #summary-tab-content .carousel-item .place-rating {
         color: #ffc107;
-        font-size: 1.4rem; /* Increased from 1.2rem */
-        margin-bottom: 15px; /* Increased from 12px */
+        font-size: 1.4rem; 
+        margin-bottom: 15px; 
         font-weight: 600;
       }
 
       #summary-tab-content .carousel-item .place-hours {
         color: #888;
-        font-size: 1.3rem; /* Increased from 1.15rem */
-        margin-bottom: 15px; /* Increased from 12px */
+        font-size: 1.3rem;
+        margin-bottom: 15px;
         font-weight: 500;
       }
 
       #summary-tab-content .carousel-item .place-address {
         color: #666;
-        font-size: 1.2rem; /* Increased from 1.1rem */
+        font-size: 1.2rem;
         line-height: 1.4;
-        margin-top: auto; /* Push to bottom */
+        margin-top: auto; 
       }
 
-      /* Tips styling - SINGLE TIP WITH BIGGER FONT */
+      /* Tips styling */
       #summary-tab-content .carousel-item .place-tips {
         margin-top: 15px;
         padding-top: 15px;
@@ -355,12 +354,12 @@ div(
       }
 
       #summary-tab-content .carousel-item .place-tip {
-        font-size: 1.3rem; /* Increased from 1.1rem */
+        font-size: 1.3rem;
         color: #036B55;
         font-weight: 500;
         line-height: 1.4;
         margin: 0;
-        padding: 10px 15px; /* Increased padding */
+        padding: 10px 15px; 
         background: rgba(3, 107, 85, 0.08);
         border-radius: 6px;
         border-left: 3px solid #036B55;
@@ -388,7 +387,7 @@ div(
         box-shadow: 0 12px 20px rgba(3, 107, 85, 0.2);
       }
 
-      /* DAY HIGHLIGHTING - SINGLE BOX AROUND COLUMN */
+      /* Day highlights */
       #summary-tab-content .itinerary-table.simplified th.active-day,
       #summary-tab-content .itinerary-table.simplified td.active-day {
         background-color: #e8f5e8 !important;
@@ -406,7 +405,6 @@ div(
         border-radius: 0 0 8px 8px;
       }
 
-      /* Remove individual cell borders when column is highlighted */
       #summary-tab-content .itinerary-table.simplified th.active-day .top-activity,
       #summary-tab-content .itinerary-table.simplified td.active-day .top-activity {
         border-left: none !important;
@@ -422,7 +420,7 @@ div(
         justify-content: center;
         align-items: center;
         gap: 15px;
-        margin-top: 15px; /* Reduced margin */
+        margin-top: 15px; 
       }
 
       #summary-tab-content .carousel-nav-button {
@@ -450,7 +448,7 @@ div(
       #summary-tab-content .carousel-placeholder {
         text-align: center;
         color: #666;
-        padding: 50px 40px; /* More padding */
+        padding: 50px 40px;
         background: #f8f9fa;
         border-radius: 10px;
         border: 2px dashed #dee2e6;
@@ -535,7 +533,7 @@ div(
         line-height: 1.4;
       }
 
-      /* NEW: Empty state message styling */
+      /* Empty state message styling */
       #summary-tab-content .empty-state-message {
         text-align: center;
         padding: 60px 40px;
@@ -562,7 +560,7 @@ div(
         margin-bottom: 10px;
       }
 
-      /* NEW: Select dates card styling - LARGER TEXT AND BETTER LAYOUT */
+      /* Selected dates card styling */
       #summary-tab-content .select-dates-card {
         background-color: #ffffff;
         border: 1px solid #dee2e6;
@@ -666,6 +664,11 @@ div(
           timestamp: new Date().getTime()
         });
       });
+      
+      // Handle PDF download trigger
+      Shiny.addCustomMessageHandler('trigger_download', function(message) {
+        $('#' + message.id)[0].click();
+      });
     "
       )
     )
@@ -693,11 +696,11 @@ div(
     ))
   ),
   
-  # SHOW WHEN DATES ARE SELECTED: Itinerary and Carousel
+  # Itinerary and Carousel
   conditionalPanel(
     condition = "output.has_dates_selected",
     
-    # ITINERARY SECTION
+    # Itinerary section
     div(
       class = "itinerary-section",
       h4("Your Recommended Itinerary"),
@@ -705,11 +708,11 @@ div(
       div(class = "itinerary-scroll-container", uiOutput("itinerary_table"))
     ),
     
-    # CAROUSEL SECTION
+    # Carousel section
     div(
       class = "top-combined-section",
       
-      # Carousel Section - REMOVED SUBTITLE FROM CAROUSEL HEADER
+      # Carousel Section
       div(
         class = "carousel-section", 
         uiOutput("activity_carousel")
@@ -720,13 +723,15 @@ div(
         column(
           12,
           style = "text-align: center; margin-top: 5px;",
-          actionButton("export_pdf", "Download Summary PDF", class = "export-button")
+          actionButton("export_pdf", "Download Summary PDF", class = "export-button"),
+          # Hidden download button
+          downloadButton("download_pdf", "Download", style = "display: none;")
         )
       )
     )
   ),
   
-  # SHOW WHEN NO DATES SELECTED: Instruction card - LARGER TEXT AND BETTER LAYOUT
+  # Instruction card 
   conditionalPanel(condition = "!output.has_dates_selected", div(
     class = "select-dates-card",
     h4("📅 Plan Your Melbourne Adventure"),
