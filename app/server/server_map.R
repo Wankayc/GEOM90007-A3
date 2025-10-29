@@ -248,16 +248,26 @@ observeEvent(input$google_map_marker_click, {
   
   location <- location_data[1, ]
   
+  # 安全地提取值，处理 NA 和空值
+  safe_extract <- function(value, default = "Unknown") {
+    if (is.null(value) || length(value) == 0) return(default)
+    char_value <- as.character(value)
+    if (is.na(char_value) || char_value == "NA" || nchar(trimws(char_value)) == 0) {
+      return(default)
+    }
+    return(char_value)
+  }
+  
   # 保存选中的地点信息
   map_rv$selected_location <- list(
-    name = as.character(location$Name),
+    name = safe_extract(location$Name, "Unknown Location"),
     lat = as.numeric(location$Latitude),
     lng = as.numeric(location$Longitude),
-    rating = if("Google_Rating" %in% names(location)) as.character(location$Google_Rating) else "N/A",
-    opening = if("opening_time" %in% names(location)) as.character(location$opening_time) else "Unknown",
-    closing = if("closing_time" %in% names(location)) as.character(location$closing_time) else "Unknown",
-    theme = if("Theme" %in% names(location)) as.character(location$Theme) else "Unknown",
-    sub_theme = if("Sub_Theme" %in% names(location)) as.character(location$Sub_Theme) else "Unknown"
+    rating = if("Google_Rating" %in% names(location)) safe_extract(location$Google_Rating, "N/A") else "N/A",
+    opening = if("opening_time" %in% names(location)) safe_extract(location$opening_time, "Unknown") else "Unknown",
+    closing = if("closing_time" %in% names(location)) safe_extract(location$closing_time, "Unknown") else "Unknown",
+    theme = if("Theme" %in% names(location)) safe_extract(location$Theme, "Unknown") else "Unknown",
+    sub_theme = if("Sub_Theme" %in% names(location)) safe_extract(location$Sub_Theme, "Unknown") else "Unknown"
   )
   
   cat("✓ Location selected:", map_rv$selected_location$name, "\n")
@@ -685,10 +695,10 @@ observeEvent(input$get_directions, {
       duration_value <- tryCatch(as.numeric(leg$duration$value), error = function(e) NA)
       
       if (!is.na(distance_value) && !is.na(duration_value)) {
-        route_summaries[[mode]] <- list(
+      route_summaries[[mode]] <- list(
           distance_km  = round(distance_value / 1000, 1),
           duration_min = round(duration_value / 60)
-        )
+      )
         cat("✓ Route summary for", mode, ":", route_summaries[[mode]]$distance_km, "km,",
             route_summaries[[mode]]$duration_min, "min\n")
       } else {
@@ -789,34 +799,53 @@ output$selected_location_card <- renderUI({
       div(
         style = "margin-bottom: 6px;",
         icon("tag"), " ",
-        tags$strong("Category: "), loc$theme
+        tags$strong("Category: "), 
+        if (!is.null(loc$theme) && !is.na(loc$theme) && 
+            loc$theme != "Unknown" && nzchar(loc$theme)) {
+          loc$theme
+        } else {
+          tags$span(style = "color: rgba(255,255,255,0.7); font-style: italic;", "Not Available")
+        }
       ),
       
       # Type
       div(
         style = "margin-bottom: 6px;",
         icon("info-circle"), " ",
-        tags$strong("Type: "), loc$sub_theme
+        tags$strong("Type: "), 
+        if (!is.null(loc$sub_theme) && !is.na(loc$sub_theme) && 
+            loc$sub_theme != "Unknown" && nzchar(loc$sub_theme)) {
+          loc$sub_theme
+        } else {
+          tags$span(style = "color: rgba(255,255,255,0.7); font-style: italic;", "Not Available")
+        }
       ),
       
-      # Rating
-      if (loc$rating != "N/A" && loc$rating != "NA") {
-        div(
-          style = "margin-bottom: 6px;",
-          icon("star"), " ",
-          tags$strong("Rating: "), loc$rating
-        )
-      },
+      # Rating (始终显示，缺失时显示 Not Available)
+      div(
+        style = "margin-bottom: 6px;",
+        icon("star"), " ",
+        tags$strong("Rating: "),
+        if (!is.null(loc$rating) && !is.na(loc$rating) && 
+            loc$rating != "N/A" && loc$rating != "NA" && nzchar(loc$rating)) {
+          loc$rating
+        } else {
+          tags$span(style = "color: rgba(255,255,255,0.7); font-style: italic;", "Not Available")
+        }
+      ),
       
-      # Operating Hours
-      if (loc$opening != "Unknown") {
-        div(
-          style = "margin-bottom: 6px;",
-          icon("clock"), " ",
-          tags$strong("Hours: "), 
+      # Operating Hours (始终显示，缺失时显示 Not Available)
+      div(
+        style = "margin-bottom: 6px;",
+        icon("clock"), " ",
+        tags$strong("Hours: "),
+        if (!is.null(loc$opening) && !is.na(loc$opening) && 
+            loc$opening != "Unknown" && nzchar(loc$opening)) {
           paste0(loc$opening, " - ", loc$closing)
-        )
-      }
+        } else {
+          tags$span(style = "color: rgba(255,255,255,0.7); font-style: italic;", "Not Available")
+        }
+      )
     ),
     
     # 提示信息
