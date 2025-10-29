@@ -1,70 +1,131 @@
 # ============================================================================
-# server/server_map.R - Map Tab Server Logic (NO INFO WINDOWS)
-# CSV 為主；搜尋/篩選/畫路徑；完全移除所有視窗/tooltip 相關功能
+# server/server_map.R - FIXED VERSION
+# 修复：处理Windows回车符(\r)导致时间解析失败的问题
 # ============================================================================
+# ---------- Helper: Operating Hours Filter (ANY Overlap) -------------------
+# ============================================================================
+`%||%` <- function(a, b) if (is.null(a)) b else a
 
-# ---------- Helper: Operating Hours Filter -----------------------------------
-
+# ============================================================================
+# ---------- Helper: Operating Hours Filter (STRICT COVERAGE) ---------------
+# 餐厅必须在用户选择的整个时间段内都营业
+# ============================================================================
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 filter_by_operating_hours_csv <- function(df) {
   if (is.null(df) || !nrow(df)) return(df)
   if (!("opening_time" %in% names(df)) || !("closing_time" %in% names(df))) return(df)
   
-  # 确保能访问到 input - 使用 time_filter (UI中的实际ID)
-  range <- tryCatch({
-    input$time_filter %||% c(0, 24)
-  }, error = function(e) {
-    c(0, 24)
-  })
+  # 讀取 UI 狀態（小時 -> 分鐘）
+  rng <- tryCatch(input$time_filter %||% c(0, 24), error = function(e) c(0, 24))
+  include_unknown <- tryCatch(isTRUE(input$include_unknown_hours), error = function(e) TRUE)
+  range_min <- as.integer(rng[1] * 60L)
+  range_max <- as.integer(rng[2] * 60L)
   
-  include_unknown <- tryCatch({
-    isTRUE(input$include_unknown_hours)
-  }, error = function(e) {
-    TRUE
-  })
-  
-  cat("📊 Filtering by hours:", range[1], "-", range[2], "\n")
-  cat("📊 Include unknown:", include_unknown, "\n")
-  
-  # 將 "HH:MM" 轉為「分鐘」(integer)，例如 "8:30" → 510
-  to_minutes <- function(x) {
-    if (is.na(x) || !nzchar(x)) return(NA_real_)
-    parts <- strsplit(trimws(x), ":")[[1]]
-    h <- as.numeric(parts[1])
-    m <- ifelse(length(parts) > 1, as.numeric(parts[2]), 0)
-    h * 60 + m
+  # ---- Helper: Parse time string to minutes --------------------------------
+  to_minutes_one <- function(x) {
+    if (is.na(x)) return(NA_integer_)
+    
+    # 强力清理 - 删除所有空白字符
+    s <- gsub("[\\s\\r\\n\\t]+", "", as.character(x))
+    
+    if (identical(s, "") || tolower(s) %in% c("na","nan","none")) return(NA_integer_)
+    
+    # 如果看起来像评分，返回NA
+    if (grepl("^[0-9]+(\\.[0-9]+)?$", s)) return(NA_integer_)
+    
+    parts <- strsplit(s, ":", fixed = TRUE)[[1]]
+    h <- suppressWarnings(as.integer(parts[1]))
+    m <- if (length(parts) > 1) suppressWarnings(as.integer(parts[2])) else 0L
+    if (is.na(h) || is.na(m) || h < 0L || h > 24L || m < 0L || m > 59L) return(NA_integer_)
+    
+    # 24:00 treated as end of day (23:59)
+    if (h == 24L && m == 0L) return(23L*60L + 59L)
+    h*60L + m
   }
+  to_minutes <- function(v) vapply(v, to_minutes_one, integer(1))
   
-  # 使用者輸入的篩選區間轉成分鐘
-  range_min <- as.integer(range[1] * 60)
-  range_max <- as.integer(range[2] * 60)
+  # ---- Convert times to minutes ---------------------------------------------
+  df$open_min  <- to_minutes(df$opening_time)
+  df$close_min <- to_minutes(df$closing_time)
   
-  df$open_min <- sapply(df$opening_time, to_minutes)
-  df$close_min <- sapply(df$closing_time, to_minutes)
-  
+  # ---- Main filtering logic (STRICT COVERAGE) -------------------------------
   keep <- logical(nrow(df))
+  match_count <- 0
+  no_match_count <- 0
+  
   for (i in seq_len(nrow(df))) {
     o <- df$open_min[i]
     c <- df$close_min[i]
     
+    # Unknown hours
     if (is.na(o) || is.na(c)) {
       keep[i] <- include_unknown
-    } else if (c >= o) {
-      # 正常情況：開 < 關
-      keep[i] <- (range_max >= o) && (range_min <= c)
-  } else {
-      # 跨午夜（例如 22:00–02:00）
-      keep[i] <- (range_min <= c) || (range_max >= o)
+      next
+    }
+    
+    # Normal case: does not cross midnight (open <= close)
+    if (c >= o) {
+      # ⭐ STRICT COVERAGE: 餐厅必须在用户选择的整个时间段内营业
+      # 开门时间 <= 用户开始时间 AND 关门时间 >= 用户结束时间
+      coverage <- (o <= range_min) && (c >= range_max)
+      keep[i] <- coverage
+      
+      # Debug first few matches and non-matches
+      if (coverage && match_count < 5) {
+        match_count <- match_count + 1
+        cat(sprintf("✅ Match #%d: %02d:%02d-%02d:%02d covers %02d:%02d-%02d:%02d\n",
+                    match_count,
+                    o %/% 60, o %% 60, c %/% 60, c %% 60,
+                    range_min %/% 60, range_min %% 60,
+                    range_max %/% 60, range_max %% 60))
+      }
+      if (!coverage && no_match_count < 5) {
+        no_match_count <- no_match_count + 1
+        reason <- ""
+        if (o > range_min) reason <- "(opens too late)"
+        else if (c < range_max) reason <- "(closes too early)"
+        cat(sprintf("❌ No match #%d: %02d:%02d-%02d:%02d vs %02d:%02d-%02d:%02d %s\n",
+                    no_match_count,
+                    o %/% 60, o %% 60, c %/% 60, c %% 60,
+                    range_min %/% 60, range_min %% 60,
+                    range_max %/% 60, range_max %% 60,
+                    reason))
+      }
+    } else {
+      # Crosses midnight (e.g., 22:00-02:00)
+      if (range_max > range_min) {
+        # 用户时间不跨午夜
+        # 跨午夜的餐厅很难"完全覆盖"用户的白天时段
+        # 只有当用户时间完全在午夜前或午夜后才可能
+        # 这里采用保守策略：排除
+        keep[i] <- FALSE
+      } else {
+        # 用户时间也跨午夜（罕见）
+        keep[i] <- TRUE
+      }
     }
   }
   
   filtered <- df[keep, , drop = FALSE]
-  cat("📊 Filtered:", nrow(df), "→", nrow(filtered), "locations\n")
+  
+  # ---- Debug output ---------------------------------------------------------
+  total <- nrow(df)
+  n_unknown <- sum(is.na(df$open_min) | is.na(df$close_min))
+  n_normal  <- sum(!is.na(df$open_min) & !is.na(df$close_min) & (df$close_min >= df$open_min))
+  n_overn   <- sum(!is.na(df$open_min) & !is.na(df$close_min) & (df$close_min <  df$open_min))
+  
+  cat("\n📊 Hours filter [STRICT coverage]  ",
+      sprintf("%02d:%02d–%02d:%02d", range_min%/%60, range_min%%60, range_max%/%60, range_max%%60),
+      " | include_unknown:", include_unknown, "\n")
+  cat("   Total:", total,
+      "| Unknown:", n_unknown,
+      "| Normal:", n_normal,
+      "| Overnight:", n_overn,
+      "| Kept:", nrow(filtered), "\n")
   
   filtered
 }
-
 # ---------- Travel mode colors -----------------------------------------------
 
 MODE_COLORS <- list(
@@ -95,7 +156,7 @@ style_json_string <- '[
   {"featureType":"road.highway","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
   {"featureType":"road.arterial","elementType":"labels.icon","stylers":[{"visibility":"off"}]},
   {"featureType":"poi","stylers":[{"visibility":"on"}]},
-  {"featureType":"poi.business","stylers":[{"visibility":"om"}]}
+  {"featureType":"poi.business","stylers":[{"visibility":"on"}]}
 ]'
 
 output$google_map <- renderGoogle_map({

@@ -228,11 +228,11 @@ tabPanel(
       ),
       div(
         style = "display: flex; gap: 10px; margin-bottom: 10px;",
-        actionButton("set_as_start", "Set as Start Location",
+        actionButton("set_as_start", "Set as Start",
                      icon = icon("map-pin"),
                      class = "btn btn-sm btn-success",
                      style = "flex: 1;"),
-        actionButton("set_as_end", "Set as End Location",
+        actionButton("set_as_end", "Set as End",
                      icon = icon("flag-checkered"),
                      class = "btn btn-sm btn-danger",
                      style = "flex: 1;")
@@ -307,7 +307,7 @@ tabPanel(
               "Show places open between:",
               min = 0, max = 24, value = c(7, 23), step = 1, post = ":00", dragRange = TRUE
             ),
-            checkboxInput("include_unknown_hours", "Include places with unknown hours", TRUE),
+            checkboxInput("include_unknown_hours", "Include places with unknown hours", FALSE),
             helpText("Drag to filter by operating hours. Supports cross-midnight.")
           )
         )
