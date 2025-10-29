@@ -323,17 +323,33 @@ div(
   line-height: 1.3;
 }
 
-/* DAY HIGHLIGHTING */
-#summary-tab-content .itinerary-day-header.active-day {
+/* DAY HIGHLIGHTING - SINGLE BOX AROUND COLUMN */
+#summary-tab-content .itinerary-table.simplified th.active-day,
+#summary-tab-content .itinerary-table.simplified td.active-day {
   background-color: #e8f5e8 !important;
-  border: 2px solid #28a745 !important;
-  border-radius: 8px;
+  position: relative;
 }
 
-#summary-tab-content .itinerary-day-cell.active-day {
-  background-color: #e8f5e8 !important;
+#summary-tab-content .itinerary-table.simplified th.active-day {
   border: 2px solid #28a745 !important;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
+}
+
+#summary-tab-content .itinerary-table.simplified td.active-day {
+  border: 2px solid #28a745 !important;
+  border-top: none !important;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Remove individual cell borders when column is highlighted */
+#summary-tab-content .itinerary-table.simplified th.active-day .top-activity,
+#summary-tab-content .itinerary-table.simplified td.active-day .top-activity {
+  border-left: none !important;
+}
+
+#summary-tab-content .itinerary-table.simplified th.active-day .no-activities,
+#summary-tab-content .itinerary-table.simplified td.active-day .no-activities {
+  border: none !important;
 }
 
 
