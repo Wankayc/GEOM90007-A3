@@ -271,7 +271,7 @@ div(
       }
       
       #summary-tab-content .carousel-header p {
-        display: none; /* Hide the subtitle */
+        display: none; 
       }
 
       #summary-tab-content .carousel-container {
