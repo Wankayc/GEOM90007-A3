@@ -468,12 +468,15 @@ summary_server <- function(input, output, session, user_behavior, weather_module
               NULL
             }
             
+            # Generate helpful tips based on place type and characteristics
+            tips <- generate_helpful_tips(place, is_primary)
+            
             # Different styling for primary recommendation
             card_class <- if (is_primary) "carousel-item primary-recommendation" else "carousel-item"
             
             div(
               class = card_class,
-              `data-place-name` = place$Name,  # Add data attribute for map integration
+              `data-place-name` = place$Name,
               `data-is-primary` = if (is_primary) "true" else "false",
               if (is_primary) {
                 div(style = "background: #036B55; color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; margin: -20px -20px 15px -20px; text-align: center; font-weight: 600; font-size: 0.9rem;",
@@ -489,6 +492,16 @@ summary_server <- function(input, output, session, user_behavior, weather_module
               },
               if (!is.null(place$Business_address) && !is.na(place$Business_address) && place$Business_address != "") {
                 div(class = "place-address", place$Business_address)
+              },
+              # Add helpful tips section - UPDATED: Only show one tip with bigger font
+              if (length(tips) > 0) {
+                div(
+                  class = "place-tips",
+                  div(
+                    class = "place-tip",
+                    tips[1]  # Only show the first tip
+                  )
+                )
               }
             )
           })
@@ -511,6 +524,95 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       )
     )
   })
+  
+  # Helper function to generate helpful tips based on place characteristics
+  generate_helpful_tips <- function(place, is_primary = FALSE) {
+    tips <- c()
+    
+    # Get place characteristics
+    place_name <- tolower(place$Name)
+    place_theme <- place$Theme
+    place_subtheme <- tolower(place$Sub_Theme)
+    rating <- place$Google_Rating
+    has_high_rating <- !is.na(rating) && rating >= 4.0
+    has_low_rating <- !is.na(rating) && rating < 3.5
+    
+    # General tips for primary recommendations
+    if (is_primary) {
+      tips <- c(tips, 
+                "Plan to arrive 15-30 minutes early to avoid crowds")
+    }
+    
+    # Tips based on theme
+    if (place_theme == "Food & Drink") {
+      if (grepl("cafe|coffee", place_subtheme)) {
+        tips <- c(tips, "Morning hours are usually less crowded")
+      } else if (grepl("restaurant|dining|bistro", place_subtheme)) {
+        tips <- c(tips, "Make reservations for dinner service")
+      } else if (grepl("bar|pub", place_subtheme)) {
+        tips <- c(tips, "Happy hour typically offers the best deals")
+      }
+    }
+    
+    if (place_theme == "Parks & Gardens") {
+      tips <- c(tips, "Early morning or late afternoon for best lighting")
+    }
+    
+    if (place_theme == "Arts & Culture") {
+      if (grepl("museum|gallery", place_subtheme)) {
+        tips <- c(tips, "Free entry days are often on weekdays")
+      }
+    }
+    
+    if (place_theme == "Shopping") {
+      if (grepl("market", place_subtheme)) {
+        tips <- c(tips, "Arrive early for the best selection")
+      } else {
+        tips <- c(tips, "Check for seasonal sales and promotions")
+      }
+    }
+    
+    if (place_theme == "Entertainment") {
+      tips <- c(tips, "Book tickets in advance for popular shows")
+    }
+    
+    if (place_theme == "Heritage") {
+      tips <- c(tips, "Guided tours provide the best insights")
+    }
+    
+    # Tips based on rating
+    if (has_high_rating) {
+      tips <- c(tips, "Highly rated by visitors - expect quality experience")
+    }
+    
+    if (has_low_rating && !is_primary) {
+      tips <- c(tips, "Recent reviews suggest checking current service quality")
+    }
+    
+    # Tips based on specific place names or characteristics
+    if (grepl("botanic|garden", place_name)) {
+      tips <- c(tips, "Spring and autumn offer the best floral displays")
+    }
+    
+    if (grepl("beach|coast", place_name)) {
+      tips <- c(tips, "Check tide times before visiting")
+    }
+    
+    if (grepl("view|lookout", place_name)) {
+      tips <- c(tips, "Clear days offer the best visibility")
+    }
+    
+    if (grepl("walk|trail|hike", place_name)) {
+      tips <- c(tips, "Wear appropriate footwear for the terrain")
+    }
+    
+    # Return just one tip - choose the most relevant one
+    if (length(tips) > 0) {
+      return(tips[1])  # Only return the first tip
+    } else {
+      return(character(0))  # Return empty if no tips
+    }
+  }
   
   # Observer for carousel place clicks
   observeEvent(input$carousel_place_clicked, {
