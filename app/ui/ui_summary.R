@@ -22,7 +22,7 @@ div(
         font-weight: 600;
         font-size: 1.1rem;
         transition: all 0.3s ease;
-        margin: 15px 0;
+        margin: 10px 0; /* Reduced margin */
       }
       #summary-tab-content .export-button:hover {
         background-color: #024d3d;
@@ -95,7 +95,7 @@ div(
         border: 1px solid #dee2e6;
         border-radius: 15px;
         padding: 30px;
-        margin-top: 25px;
+        margin-bottom: 25px; /* Reduced margin */
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
       #summary-tab-content .itinerary-section h4 {
@@ -227,8 +227,8 @@ div(
         background-color: #ffffff;
         border: 1px solid #dee2e6;
         border-radius: 15px;
-        padding: 30px;
-        margin-bottom: 30px;
+        padding: 25px; /* Reduced padding */
+        margin-bottom: 20px; /* Reduced margin */
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
 
@@ -248,14 +248,14 @@ div(
         transform: translateY(0);
       }
 
-      /* MINIMALISTIC CAROUSEL - CLEAN AND DISTINCT */
+      /* MINIMALISTIC CAROUSEL - CLEAN AND DISTINCT WITH BIGGER FONTS */
 #summary-tab-content .carousel-section {
-  margin-bottom: 30px;
+  margin-bottom: 20px; /* Reduced margin */
 }
 
 #summary-tab-content .carousel-header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 15px; /* Reduced margin */
   padding: 15px;
   background: #f8f9fa;
   border-radius: 10px;
@@ -265,7 +265,7 @@ div(
 #summary-tab-content .carousel-header h4 {
   color: #036B55;
   margin: 0;
-  font-size: 1.4rem; /* Bigger font */
+  font-size: 1.5rem; /* Bigger font */
   font-weight: 600;
 }
 
@@ -274,53 +274,62 @@ div(
   border: 1px solid #e9ecef;
   border-radius: 10px;
   padding: 20px;
+  min-height: 320px; /* Taller container */
 }
 
 #summary-tab-content .carousel-items-container {
   display: flex;
   gap: 15px;
   margin-bottom: 20px;
-  min-height: 200px; /* Slightly taller for bigger fonts */
+  min-height: 240px; /* Taller for bigger content */
 }
 
 #summary-tab-content .carousel-item {
   flex: 1;
   background: #f8f9fa;
   border-radius: 8px;
-  padding: 18px; /* More padding for bigger text */
+  padding: 20px; /* More padding */
   border: 1px solid #e9ecef;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 #summary-tab-content .carousel-item h5 {
   color: #036B55;
-  margin: 0 0 10px 0;
-  font-size: 1.2rem; /* Bigger font */
+  margin: 0 0 12px 0;
+  font-size: 1.3rem; /* Bigger font */
   font-weight: 600;
+  line-height: 1.3;
 }
 
 #summary-tab-content .carousel-item .place-category {
   color: #666;
-  font-size: 1rem; /* Bigger font */
-  margin-bottom: 10px;
+  font-size: 1.1rem; /* Bigger font */
+  margin-bottom: 12px;
+  font-weight: 500;
 }
 
 #summary-tab-content .carousel-item .place-rating {
   color: #ffc107;
-  font-size: 1rem; /* Bigger font */
-  margin-bottom: 10px;
+  font-size: 1.1rem; /* Bigger font */
+  margin-bottom: 12px;
+  font-weight: 600;
 }
 
 #summary-tab-content .carousel-item .place-hours {
   color: #888;
-  font-size: 0.95rem; /* Bigger font */
-  margin-bottom: 10px;
+  font-size: 1.05rem; /* Bigger font */
+  margin-bottom: 12px;
+  font-weight: 500;
 }
 
 #summary-tab-content .carousel-item .place-address {
   color: #666;
-  font-size: 0.9rem; /* Bigger font */
-  line-height: 1.3;
+  font-size: 1rem; /* Bigger font */
+  line-height: 1.4;
+  margin-top: auto; /* Push to bottom */
 }
 
 /* DAY HIGHLIGHTING - SINGLE BOX AROUND COLUMN */
@@ -358,6 +367,7 @@ div(
         justify-content: center;
         align-items: center;
         gap: 15px;
+        margin-top: 15px; /* Reduced margin */
       }
 
       #summary-tab-content .carousel-nav-button {
@@ -385,18 +395,116 @@ div(
       #summary-tab-content .carousel-placeholder {
         text-align: center;
         color: #666;
-        padding: 40px;
+        padding: 50px 40px; /* More padding */
+        background: #f8f9fa;
+        border-radius: 10px;
+        border: 2px dashed #dee2e6;
+        min-height: 240px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      #summary-tab-content .carousel-placeholder h4 {
+        color: #036B55;
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+      }
+
+      #summary-tab-content .carousel-placeholder p {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+        line-height: 1.5;
+      }
+
+      #summary-tab-content .carousel-placeholder ul {
+        text-align: left;
+        max-width: 400px;
+        margin: 15px auto;
+        font-size: 1rem;
+      }
+
+      #summary-tab-content .no-related-places {
+        text-align: center;
+        color: #666;
+        padding: 50px 40px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        min-height: 240px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      #summary-tab-content .no-related-places h4 {
+        color: #036B55;
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+      }
+
+      #summary-tab-content .no-related-places p {
+        font-size: 1.1rem;
+        line-height: 1.5;
+      }
+
+      /* Empty itinerary message styling */
+      #summary-tab-content .empty-itinerary-message {
+        text-align: center;
+        padding: 60px 40px;
+        color: #666;
         background: #f8f9fa;
         border-radius: 10px;
         border: 2px dashed #dee2e6;
       }
 
-      #summary-tab-content .no-related-places {
+      #summary-tab-content .empty-itinerary-message h3 {
+        color: #036B55;
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+      }
+
+      #summary-tab-content .empty-itinerary-message p {
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+      }
+
+      #summary-tab-content .empty-itinerary-message ul {
+        text-align: left;
+        max-width: 500px;
+        margin: 20px auto;
+        font-size: 1.1rem;
+      }
+
+      #summary-tab-content .empty-itinerary-message li {
+        margin-bottom: 8px;
+        line-height: 1.4;
+      }
+
+      /* NEW: Empty state message styling */
+      #summary-tab-content .empty-state-message {
         text-align: center;
-        color: #999;
-        padding: 40px;
+        padding: 60px 40px;
+        color: #666;
         background: #f8f9fa;
         border-radius: 10px;
+        border: 2px dashed #dee2e6;
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin: 20px 0;
+      }
+
+      #summary-tab-content .empty-state-message h4 {
+        color: #036B55;
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+      }
+
+      #summary-tab-content .empty-state-message p {
+        font-size: 1.1rem;
+        line-height: 1.5;
+        margin-bottom: 10px;
       }
     ")
     ),
@@ -420,7 +528,7 @@ div(
       class = "title-main",
       h2("Your Melbourne Exploration Summary", class = "main-title"),
       p(
-        "Explore different categories in other tabs to build your personalized recommendations and itinerary",
+        "Click categories in the Explore tab and select dates in the Weather tab to build your personalized itinerary",
         class = "subtitle"
       )
     ),
@@ -435,28 +543,36 @@ div(
     ))
   ),
   
-  # Combined Top Section - Carousel and Export
-  div(
-    class = "top-combined-section",
-    
-    # Carousel Section - Clean and minimal
-    div(class = "carousel-section", uiOutput("activity_carousel")),
-    
-    # Download Summary Button - Centered
-    fluidRow(
-      column(
-        12,
-        style = "text-align: center; margin-top: 10px;",
-        actionButton("export_pdf", "Download Summary PDF", class = "export-button")
-      )
-    )
-  ),
-  
-  # Itinerary Section - Responsive scaling
+  # ITINERARY SECTION MOVED TO TOP
   div(
     class = "itinerary-section",
     h4("Your Recommended Itinerary"),
     p("Click on any day to discover related places!", style = "text-align: center; color: #666; margin-bottom: 15px;"),
-    div(class = "itinerary-scroll-container", uiOutput("itinerary_table"))
+    div(
+      class = "itinerary-scroll-container", 
+      uiOutput("itinerary_table")
+      # REMOVED conditionalPanel - handle empty state in renderUI
+    )
+  ),
+  
+  # CAROUSEL SECTION MOVED TO BOTTOM
+  div(
+    class = "top-combined-section",
+    
+    # Carousel Section - Now below itinerary
+    div(
+      class = "carousel-section", 
+      uiOutput("activity_carousel")
+      # REMOVED conditionalPanel - always show carousel
+    ),
+    
+    # Download Summary Button - Centered with less space
+    fluidRow(
+      column(
+        12,
+        style = "text-align: center; margin-top: 5px;", 
+        actionButton("export_pdf", "Download Summary PDF", class = "export-button")
+      )
+    )
   )
 )
