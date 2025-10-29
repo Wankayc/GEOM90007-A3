@@ -25,9 +25,9 @@ library(ggiraph)
 source(here("app", "tableau-in-shiny-v1.2.R"))
 
 # read and clean data in wordcloud
-landmarks <- read.csv(here('app', 'landmarks.csv'), stringsAsFactors = FALSE)
-cafe_restaurant <- read.csv(here('app', 'cafe_and_restaurant_2023.csv'), stringsAsFactors = FALSE)
-barbecues <- read.csv(here('app', 'barbecues.csv'), stringsAsFactors = FALSE)
+landmarks <- read.csv(here('data', 'landmarks.csv'), stringsAsFactors = FALSE)
+cafe_restaurant <- read.csv(here('data', 'cafe_and_restaurant_2023.csv'), stringsAsFactors = FALSE)
+barbecues <- read.csv(here('data', 'barbecues.csv'), stringsAsFactors = FALSE)
 
 cat("\n=== BEFORE CLEANING ===\n")
 cat("Landmarks columns:", paste(names(landmarks), collapse=", "), "\n")
