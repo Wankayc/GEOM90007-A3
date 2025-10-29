@@ -206,7 +206,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     return(default_places)
   }
   
-  # Carousel data reactive - UPDATED to handle default recommendations
+  # Carousel data reactive - UPDATED to include the actual itinerary activity as first card
   carousel_data <- reactive({
     # If we have dates selected and user clicked a day, show day-specific recommendations
     dates <- selected_dates()
@@ -236,10 +236,10 @@ summary_server <- function(input, output, session, user_behavior, weather_module
             filter(Name == main_activity) %>%
             head(1)
           
+          # Get related places based on the actual activity's theme and sub-theme
           if (nrow(main_activity_info) > 0) {
             cat("Found main activity in theme_data:", main_activity_info$Theme, "-", main_activity_info$Sub_Theme, "\n")
             
-            # Find related places based on the actual activity's theme and sub-theme
             related_places <- theme_data %>%
               filter(Name != main_activity) %>%
               # Match by same theme or sub-theme for more relevant results
@@ -247,29 +247,61 @@ summary_server <- function(input, output, session, user_behavior, weather_module
                 Theme == main_activity_info$Theme |
                   Sub_Theme == main_activity_info$Sub_Theme
               ) %>%
-              head(9)
+              head(8)  # Reduced to 8 to make room for main activity
             
           } else {
-            # Fallback: use activity-based matching with BETTER logic
+            # Fallback: use activity-based matching
             cat("Main activity not found in theme_data, using activity-based matching\n")
             activity_theme <- get_activity_theme(main_activity)
             cat("Guessed theme:", activity_theme, "\n")
             
-            # For food/drink activities, show other food/drink places, not shopping
             related_places <- theme_data %>%
               filter(Name != main_activity) %>%
               filter(Theme == activity_theme) %>%
-              head(9)
+              head(8)  # Reduced to 8 to make room for main activity
           }
           
-          cat("Related places found:", nrow(related_places), "\n")
+          # CREATE COMBINED DATA: Main activity first, then related places
+          if (nrow(main_activity_info) > 0) {
+            # Use the actual activity details from theme_data
+            main_activity_row <- main_activity_info
+          } else {
+            # Create a placeholder for the main activity if not found in theme_data
+            main_activity_row <- data.frame(
+              Name = main_activity,
+              Theme = get_activity_theme(main_activity),
+              Sub_Theme = "Recommended Activity",
+              Google_Rating = NA,
+              opening_time = NA,
+              closing_time = NA,
+              Business_address = "Location details available after selection",
+              stringsAsFactors = FALSE
+            )
+          }
+          
+          # Mark the main activity as the primary recommendation
+          main_activity_row$is_primary <- TRUE
+          
+          # Mark related places as secondary
           if (nrow(related_places) > 0) {
-            cat("Sample related place:", related_places$Name[1], "-", related_places$Theme[1], "\n")
+            related_places$is_primary <- FALSE
+          }
+          
+          # Combine main activity with related places
+          all_places <- if (nrow(related_places) > 0) {
+            bind_rows(main_activity_row, related_places)
+          } else {
+            main_activity_row
+          }
+          
+          cat("Total places for carousel:", nrow(all_places), "\n")
+          if (nrow(all_places) > 0) {
+            cat("First place (primary):", all_places$Name[1], "- Primary:", all_places$is_primary[1], "\n")
           }
           
           return(list(
             main_activity = main_activity,
-            related_places = related_places,
+            related_places = all_places,
             date = date,
             day_name = format(date, "%A"),
             is_default = FALSE
@@ -281,6 +313,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     # DEFAULT RECOMMENDATIONS: Show when no itinerary or no activities
     cat("Showing default recommendations\n")
     default_places <- get_default_recommendations()
+    default_places$is_primary <- FALSE  # No primary in default mode
     
     return(list(
       main_activity = "Popular Melbourne Destinations",
@@ -370,7 +403,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     }
   })
   
-  # Carousel output - ALWAYS SHOWS CONTENT
+  # Carousel output - UPDATED to highlight the primary recommendation
   output$activity_carousel <- renderUI({
     data <- carousel_data()
     
@@ -423,6 +456,9 @@ summary_server <- function(input, output, session, user_behavior, weather_module
           lapply(1:nrow(current_items), function(i) {
             place <- current_items[i, ]
             
+            # Check if this is the primary recommendation
+            is_primary <- !is.null(place$is_primary) && place$is_primary
+            
             # Format hours to 12-hour AM/PM format
             formatted_hours <- if (!is.na(place$opening_time) && !is.na(place$closing_time)) {
               open_time <- format(strptime(place$opening_time, "%H:%M"), "%I:%M %p")
@@ -432,8 +468,17 @@ summary_server <- function(input, output, session, user_behavior, weather_module
               NULL
             }
             
+            # Different styling for primary recommendation
+            card_class <- if (is_primary) "carousel-item primary-recommendation" else "carousel-item"
+            
             div(
-              class = "carousel-item",
+              class = card_class,
+              `data-place-name` = place$Name,  # Add data attribute for map integration
+              `data-is-primary` = if (is_primary) "true" else "false",
+              if (is_primary) {
+                div(style = "background: #036B55; color: white; padding: 8px 12px; border-radius: 6px 6px 0 0; margin: -20px -20px 15px -20px; text-align: center; font-weight: 600; font-size: 0.9rem;",
+                    "⭐ Your Itinerary Recommendation")
+              },
               h5(place$Name),
               div(class = "place-category", place$Theme, " • ", place$Sub_Theme),
               if (!is.na(place$Google_Rating)) {
@@ -465,6 +510,26 @@ summary_server <- function(input, output, session, user_behavior, weather_module
         }
       )
     )
+  })
+  
+  # Observer for carousel place clicks
+  observeEvent(input$carousel_place_clicked, {
+    place_data <- input$carousel_place_clicked
+    if (!is.null(place_data)) {
+      cat("Carousel place clicked:", place_data$name, "\n")
+      cat("Is primary recommendation:", place_data$is_primary, "\n")
+      
+      # Here you can add logic to:
+      # 1. Switch to the map tab
+      # 2. Highlight the selected place on the map
+      # 3. Show details about the place
+      
+      # Example implementation:
+      # updateTabsetPanel(session, "main_nav", "map_tab")
+      # session$userData$selected_place <- place_data$name
+      
+      showNotification(paste("Selected:", place_data$name), type = "message")
+    }
   })
   
   # [Rest of your existing functions remain the same]
