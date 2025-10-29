@@ -206,6 +206,7 @@ observeEvent(input$reset_map, {
     clear_markers(layer_id = "wordcloud_places") %>%
     clear_markers(layer_id = "search_results") %>%
     clear_markers(layer_id = "route_markers") %>%
+    clear_markers(layer_id = "carousel_highlight") %>% 
     clear_polylines()
   
   # ★ 清空所有数据，不显示任何地点

@@ -1,5 +1,10 @@
 server <- function(input, output, session) {
   
+  # for carousel redirection to map
+  selected_sub_theme_for_map <- reactiveVal("")
+  map_refresh_trigger <- reactiveVal(0)
+  
+  # ------ shared weather functions for weather tab and summary tab ------------
   weather_emoji <- function(rain, tmax) {
     if (!is.na(rain) && rain >= 1) return("🌧️")
     if (!is.na(tmax) && tmax >= 25) return("☀️")
@@ -14,12 +19,14 @@ server <- function(input, output, session) {
   
   get_weather_for_date <- function(date, weather_df = calendar_feed) {
     if (nrow(weather_df) == 0) {
-      return(list(emoji = "⛅️", label = "Cloudy", temp_min = NA, temp_max = NA, rain = NA))
+      return(list(emoji = "⛅️", label = "Cloudy", temp_min = NA, 
+                  temp_max = NA, rain = NA))
     }
     
     weather_row <- weather_df[weather_df$date == date, ]
     if (nrow(weather_row) == 0) {
-      return(list(emoji = "⛅️", label = "Cloudy", temp_min = NA, temp_max = NA, rain = NA))
+      return(list(emoji = "⛅️", label = "Cloudy", temp_min = NA, 
+                  temp_max = NA, rain = NA))
     }
     
     list(
@@ -30,6 +37,8 @@ server <- function(input, output, session) {
       rain = weather_row$rain
     )
   }
+  
+  # ----------------------------------------------------------------------------
   
   # Rule-based approach for determining Personality based on categories
   user_behavior <- reactiveValues(
@@ -49,16 +58,18 @@ server <- function(input, output, session) {
     first_load = TRUE
   )
   
+  # Server logic
+  
   source("server/server_weather.R", local = TRUE)
   session$userData$calendar_feed <- calendar_feed
   weather_selected_dates <- reactiveVal(NULL)
   
-  # Show app content when data is loaded
+  # Only show dashboard when data is fully loaded
   observe({
-    # Wait for your main datasets to load
-    req(theme_data)  # Your main dataset
+    # Wait for the main dataset to load to avoid data corruption
+    req(theme_data)
     
-    # Hide loading screen and show app
+    # loading screen
     runjs('
       document.getElementById("loading-screen").style.display = "none";
       document.getElementById("app-content").style.display = "block";
@@ -67,8 +78,8 @@ server <- function(input, output, session) {
   
   # Render Tab UI
   output$weather_ui <- renderUI({
-    source("ui/ui_weather.R", local = TRUE)  # loads weather_tab_ui() once into this env
-    weather_tab_ui()                         # return the fragment
+    source("ui/ui_weather.R", local = TRUE) 
+    weather_tab_ui()                  
   })
   
   output$map_ui <- renderUI({ 
