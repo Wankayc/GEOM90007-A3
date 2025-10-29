@@ -528,7 +528,7 @@ div(
       class = "title-main",
       h2("Your Melbourne Exploration Summary", class = "main-title"),
       p(
-        "Click categories in the Explore tab and select dates in the Weather tab to build your personalized itinerary",
+        "Click categories in the 'Explore by Category' and 'Popular Attractions', and select dates in 'Weather Summary' to build your personalized itinerary.",
         class = "subtitle"
       )
     ),
