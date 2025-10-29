@@ -49,7 +49,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     })
   }
   
-  # Track clicked day for carousel
+  # Track clicked day for carousel - FIXED to properly update
   clicked_day <- reactiveVal(1)
   
   # Store itinerary data separately to prevent re-rendering
@@ -138,16 +138,17 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     )
   })
   
-  # Observe day clicks for carousel - ONLY updates highlighting via JavaScript
+  # Observe day clicks for carousel - FIXED to properly update carousel
   observeEvent(input$day_clicked, {
+    cat("Day clicked before update:", clicked_day(), "->", input$day_clicked, "\n")
     clicked_day(input$day_clicked)
-    cat("Day clicked:", input$day_clicked, "\n")
+    cat("Day clicked after update:", clicked_day(), "\n")
     
-    # Update highlighting via JavaScript instead of re-rendering
-    session$sendCustomMessage("highlight_day", input$day_clicked)
+    # Force carousel to update by triggering reactivity
+    carousel_data()
   })
   
-  # Carousel data reactive - NOW RETURNS ALL RELATED PLACES
+  # Carousel data reactive - FIXED to properly depend on clicked_day()
   carousel_data <- reactive({
     day <- clicked_day()
     cat("Carousel data requested for day:", day, "\n")
@@ -170,19 +171,41 @@ summary_server <- function(input, output, session, user_behavior, weather_module
         main_activity <- activities[[1]]$name
         cat("Main activity:", main_activity, "\n")
         
-        # Find related places from theme_data (excluding the main activity)
-        related_places <- theme_data %>%
-          filter(Name != main_activity) %>%
-          # Find places with similar themes or categories
-          mutate(
-            is_related = grepl(main_activity, Name, ignore.case = TRUE) |
-              Sub_Theme == activities[[1]]$location |
-              Theme %in% get_related_themes(activities[[1]]$location)
-          ) %>%
-          filter(is_related) %>%
-          head(9)  # Get up to 9 related places for 3 pages of 3 items
+        # Find the main activity in theme_data to get its actual details
+        main_activity_info <- theme_data %>%
+          filter(Name == main_activity) %>%
+          head(1)
+        
+        if (nrow(main_activity_info) > 0) {
+          cat("Found main activity in theme_data:", main_activity_info$Theme, "-", main_activity_info$Sub_Theme, "\n")
+          
+          # Find related places based on the actual activity's theme and sub-theme
+          related_places <- theme_data %>%
+            filter(Name != main_activity) %>%
+            # Match by same theme or sub-theme for more relevant results
+            filter(
+              Theme == main_activity_info$Theme |
+                Sub_Theme == main_activity_info$Sub_Theme
+            ) %>%
+            head(9)
+          
+        } else {
+          # Fallback: use activity-based matching with BETTER logic
+          cat("Main activity not found in theme_data, using activity-based matching\n")
+          activity_theme <- get_activity_theme(main_activity)
+          cat("Guessed theme:", activity_theme, "\n")
+          
+          # For food/drink activities, show other food/drink places, not shopping
+          related_places <- theme_data %>%
+            filter(Name != main_activity) %>%
+            filter(Theme == activity_theme) %>%
+            head(9)
+        }
         
         cat("Related places found:", nrow(related_places), "\n")
+        if (nrow(related_places) > 0) {
+          cat("Sample related place:", related_places$Name[1], "-", related_places$Theme[1], "\n")
+        }
         
         return(list(
           main_activity = main_activity,
@@ -195,24 +218,33 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     return(NULL)
   })
   
-  # Helper function to get related themes
-  get_related_themes <- function(location_desc) {
-    theme_map <- list(
-      "Park" = c("Parks & Gardens", "Leisure"),
-      "Market" = c("Shopping", "Markets", "Food & Drink"),
-      "Restaurant" = c("Food & Drink", "Entertainment"),
-      "Cafe" = c("Food & Drink"),
-      "Shopping" = c("Shopping", "Markets"),
-      "Arts" = c("Arts & Culture", "Heritage"),
-      "Entertainment" = c("Entertainment", "Arts & Culture")
-    )
+  # Get theme for an activity - IMPROVED matching
+  get_activity_theme <- function(activity_name) {
+    # Try to find the activity in theme_data to get its actual theme
+    activity_info <- theme_data %>%
+      filter(grepl(activity_name, Name, ignore.case = TRUE)) %>%
+      head(1)
     
-    for (key in names(theme_map)) {
-      if (grepl(key, location_desc, ignore.case = TRUE)) {
-        return(theme_map[[key]])
-      }
+    if (nrow(activity_info) > 0) {
+      return(activity_info$Theme)
     }
-    return(c("Attractions", "Leisure"))  # Default fallback
+    
+    # Fallback: guess based on activity name - IMPROVED logic
+    if (grepl("park|garden|botanic|reserve", activity_name, ignore.case = TRUE)) {
+      return("Parks & Gardens")
+    } else if (grepl("cafe|restaurant|bar|food|coffee|dining|pub|bistro|eat", activity_name, ignore.case = TRUE)) {
+      return("Food & Drink")
+    } else if (grepl("museum|gallery|art|cultural|exhibition", activity_name, ignore.case = TRUE)) {
+      return("Arts & Culture")
+    } else if (grepl("shop|market|boutique|mall|retail|store", activity_name, ignore.case = TRUE)) {
+      return("Shopping")
+    } else if (grepl("theatre|cinema|concert|entertainment|show|performance", activity_name, ignore.case = TRUE)) {
+      return("Entertainment")
+    } else if (grepl("historic|heritage|monument|memorial", activity_name, ignore.case = TRUE)) {
+      return("Heritage")
+    } else {
+      return("Attractions")  # Default
+    }
   }
   
   # Carousel page management (each page shows 3 items)
@@ -276,7 +308,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       return(div(
         class = "no-related-places",
         h4("No related places found"),
-        p("We couldn't find any related places for this activity")
+        p("We couldn't find any related places for:", strong(data$main_activity))
       ))
     }
     
