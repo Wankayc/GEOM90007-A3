@@ -49,6 +49,31 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     })
   }
   
+  # Track clicked day for carousel
+  clicked_day <- reactiveVal(1)
+  
+  # Store itinerary data separately to prevent re-rendering
+  itinerary_data <- reactiveValues(
+    activities = list(),
+    last_updated = NULL
+  )
+  
+  # Update itinerary data only when dates or user behavior changes
+  observe({
+    dates <- selected_dates()
+    if (length(dates) > 0) {
+      activities_list <- lapply(dates, function(date) {
+        tryCatch({
+          get_activities_for_date(date, user_behavior)
+        }, error = function(e) {
+          list()
+        })
+      })
+      itinerary_data$activities <- activities_list
+      itinerary_data$last_updated <- Sys.time()
+    }
+  })
+  
   # OPTION 1: Simplified itinerary showing only top activity per day
   output$itinerary_table <- renderUI({
     dates <- selected_dates()
@@ -58,33 +83,40 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       return(div("No dates selected", style = "color: #999; font-style: italic;"))
     }
     
+    # Use stored activities to prevent re-rendering
+    activities_list <- itinerary_data$activities
+    
     tags$table(
       class = "itinerary-table simplified",
       tags$thead(
         tags$tr(
-          lapply(dates, function(date) {
+          lapply(seq_along(dates), function(i) {
+            date <- dates[i]
             weather <- get_weather_for_date_safe(date)
             tags$th(
+              `data-day` = i,
+              class = paste("itinerary-day-header", if(i == clicked_day()) "active-day" else ""),
+              style = "cursor: pointer; padding: 15px;",
               div(class = "weather-icon", weather$emoji),
               div(class = "day-date", format(date, "%A")),
-              div(format(date, "%d %b"))
+              div(class = "date-number", format(date, "%d %b"))
             )
           })
         )
       ),
       tags$tbody(
         tags$tr(
-          lapply(dates, function(date) {
-            activities <- tryCatch({
-              get_activities_for_date(date, user_behavior)
-            }, error = function(e) {
-              list()
-            })
+          lapply(seq_along(dates), function(i) {
+            date <- dates[i]
+            activities <- if (length(activities_list) >= i) activities_list[[i]] else list()
             
             # Take only the first (top) activity
             top_activity <- if (length(activities) > 0) activities[[1]] else NULL
             
             tags$td(
+              `data-day` = i,
+              class = paste("itinerary-day-cell", if(i == clicked_day()) "active-day" else ""),
+              style = "cursor: pointer; padding: 0;",
               if (!is.null(top_activity)) {
                 div(
                   class = "top-activity",
@@ -96,7 +128,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
                 div(
                   class = "no-activities",
                   "No activities planned",
-                  style = "color: #999; font-style: italic;"
+                  style = "color: #999; font-style: italic; padding: 40px 20px;"
                 )
               }
             )
@@ -105,6 +137,266 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       )
     )
   })
+  
+  # Observe day clicks for carousel - ONLY updates highlighting via JavaScript
+  observeEvent(input$day_clicked, {
+    clicked_day(input$day_clicked)
+    cat("Day clicked:", input$day_clicked, "\n")
+    
+    # Update highlighting via JavaScript instead of re-rendering
+    session$sendCustomMessage("highlight_day", input$day_clicked)
+  })
+  
+  # Carousel data reactive - NOW RETURNS ALL RELATED PLACES
+  carousel_data <- reactive({
+    day <- clicked_day()
+    cat("Carousel data requested for day:", day, "\n")
+    
+    dates <- selected_dates()
+    if (length(dates) >= day) {
+      date <- dates[day]
+      
+      # Use stored activities instead of re-fetching
+      activities <- if (length(itinerary_data$activities) >= day) {
+        itinerary_data$activities[[day]]
+      } else {
+        list()
+      }
+      
+      cat("Activities found:", length(activities), "\n")
+      
+      if (length(activities) > 0) {
+        # Get the main activity for that day
+        main_activity <- activities[[1]]$name
+        cat("Main activity:", main_activity, "\n")
+        
+        # Find related places from theme_data (excluding the main activity)
+        related_places <- theme_data %>%
+          filter(Name != main_activity) %>%
+          # Find places with similar themes or categories
+          mutate(
+            is_related = grepl(main_activity, Name, ignore.case = TRUE) |
+              Sub_Theme == activities[[1]]$location |
+              Theme %in% get_related_themes(activities[[1]]$location)
+          ) %>%
+          filter(is_related) %>%
+          head(9)  # Get up to 9 related places for 3 pages of 3 items
+        
+        cat("Related places found:", nrow(related_places), "\n")
+        
+        return(list(
+          main_activity = main_activity,
+          related_places = related_places,
+          date = date,
+          day_name = format(date, "%A")
+        ))
+      }
+    }
+    return(NULL)
+  })
+  
+  # Helper function to get related themes
+  get_related_themes <- function(location_desc) {
+    theme_map <- list(
+      "Park" = c("Parks & Gardens", "Leisure"),
+      "Market" = c("Shopping", "Markets", "Food & Drink"),
+      "Restaurant" = c("Food & Drink", "Entertainment"),
+      "Cafe" = c("Food & Drink"),
+      "Shopping" = c("Shopping", "Markets"),
+      "Arts" = c("Arts & Culture", "Heritage"),
+      "Entertainment" = c("Entertainment", "Arts & Culture")
+    )
+    
+    for (key in names(theme_map)) {
+      if (grepl(key, location_desc, ignore.case = TRUE)) {
+        return(theme_map[[key]])
+      }
+    }
+    return(c("Attractions", "Leisure"))  # Default fallback
+  }
+  
+  # Carousel page management (each page shows 3 items)
+  carousel_page <- reactiveVal(1)
+  
+  # Reset carousel when new day is clicked
+  observeEvent(clicked_day(), {
+    carousel_page(1)
+    cat("Carousel page reset to 1\n")
+  })
+  
+  # Calculate total pages
+  total_pages <- reactive({
+    data <- carousel_data()
+    if (is.null(data) || nrow(data$related_places) == 0) return(1)
+    ceiling(nrow(data$related_places) / 3)
+  })
+  
+  # Get current page items (3 items per page)
+  current_page_items <- reactive({
+    data <- carousel_data()
+    if (is.null(data) || nrow(data$related_places) == 0) return(NULL)
+    
+    current_page <- carousel_page()
+    start_index <- (current_page - 1) * 3 + 1
+    end_index <- min(start_index + 2, nrow(data$related_places))
+    
+    data$related_places[start_index:end_index, ]
+  })
+  
+  # Carousel navigation
+  observeEvent(input$carousel_prev, {
+    current <- carousel_page()
+    if (current > 1) {
+      carousel_page(current - 1)
+      cat("Carousel prev: page", current, "->", current - 1, "\n")
+    }
+  })
+  
+  observeEvent(input$carousel_next, {
+    current <- carousel_page()
+    if (current < total_pages()) {
+      carousel_page(current + 1)
+      cat("Carousel next: page", current, "->", current + 1, "\n")
+    }
+  })
+  
+  # Carousel output - NOW SHOWS 3 ITEMS PER PAGE
+  output$activity_carousel <- renderUI({
+    data <- carousel_data()
+    
+    if (is.null(data)) {
+      return(div(
+        class = "carousel-placeholder",
+        h4("✨ Discover Related Places"),
+        p("Click on any day in your itinerary to see places related to that day's main activity!")
+      ))
+    }
+    
+    if (nrow(data$related_places) == 0) {
+      return(div(
+        class = "no-related-places",
+        h4("No related places found"),
+        p("We couldn't find any related places for this activity")
+      ))
+    }
+    
+    current_items <- current_page_items()
+    current_page <- carousel_page()
+    total_pages_val <- total_pages()
+    
+    tagList(
+      # Simple header showing what day was clicked
+      div(
+        class = "carousel-header",
+        h4("💫 ", format(data$date, "%A"), " - ", format(data$date, "%d %B"))
+      ),
+      
+      # The carousel itself with 3 items
+      div(
+        class = "carousel-container",
+        
+        # Carousel items container
+        div(
+          class = "carousel-items-container",
+          lapply(1:nrow(current_items), function(i) {
+            place <- current_items[i, ]
+            
+            # Format hours to 12-hour AM/PM format
+            formatted_hours <- if (!is.na(place$opening_time) && !is.na(place$closing_time)) {
+              open_time <- format(strptime(place$opening_time, "%H:%M"), "%I:%M %p")
+              close_time <- format(strptime(place$closing_time, "%H:%M"), "%I:%M %p")
+              paste(open_time, "-", close_time)
+            } else {
+              NULL
+            }
+            
+            div(
+              class = "carousel-item",
+              h5(place$Name),
+              div(class = "place-category", place$Theme, " • ", place$Sub_Theme),
+              if (!is.na(place$Google_Rating)) {
+                div(class = "place-rating", paste("⭐", round(place$Google_Rating, 1), "/5"))
+              },
+              if (!is.null(formatted_hours)) {
+                div(class = "place-hours", formatted_hours)
+              },
+              if (!is.null(place$Business_address) && !is.na(place$Business_address) && place$Business_address != "") {
+                div(class = "place-address", place$Business_address)
+              }
+            )
+          })
+        ),
+        
+        # Simple navigation
+        div(
+          class = "carousel-nav",
+          actionButton("carousel_prev", "◀ Previous", 
+                       class = "carousel-nav-button",
+                       disabled = current_page == 1),
+          span(class = "carousel-page-info",
+               paste(current_page, "of", total_pages_val)),
+          actionButton("carousel_next", "Next ▶", 
+                       class = "carousel-nav-button",
+                       disabled = current_page == total_pages_val)
+        )
+      )
+    )
+  })
+  
+  # Helper function for theme emojis
+  get_theme_emoji <- function(theme) {
+    emoji_map <- list(
+      "Food & Drink" = "🍽️",
+      "Parks & Gardens" = "🌳",
+      "Arts & Culture" = "🎨",
+      "Shopping" = "🛍️",
+      "Attractions" = "🏛️",
+      "Leisure" = "🎯",
+      "Heritage" = "🏰",
+      "Markets" = "🛒",
+      "Entertainment" = "🎭"
+    )
+    return(emoji_map[[theme]] %||% "📍")
+  }
+  
+  # Generate fun facts based on place type
+  generate_fun_fact <- function(place) {
+    facts <- list(
+      "Food & Drink" = c(
+        "💡 Local tip: Try their signature coffee blend!",
+        "🍴 Popular dish: Ask for the daily special",
+        "⏰ Best time: Avoid lunch rush at 12:30-1:30pm",
+        "🌟 Hidden gem: Locals love their breakfast menu"
+      ),
+      "Parks & Gardens" = c(
+        "🌼 Perfect for: Picnics and morning walks",
+        "📸 Photo spot: Great for landscape photography",
+        "🕊️ Wildlife: Look out for local bird species",
+        "🌅 Best time: Golden hour for amazing photos"
+      ),
+      "Arts & Culture" = c(
+        "🎭 Insider tip: Check for free guided tours",
+        "📅 Current exhibit: Ask about temporary displays",
+        "🖼️ Don't miss: The main gallery collection",
+        "🎨 Local artists: Support local talent in gift shop"
+      ),
+      "Shopping" = c(
+        "🛍️ Best finds: Look for local designer items",
+        "💫 Hidden gems: Explore the smaller boutiques",
+        "🕒 Quiet times: Weekday mornings are less crowded",
+        "🎁 Souvenirs: Perfect for unique Melbourne gifts"
+      )
+    )
+    
+    theme_facts <- facts[[place$Theme]] %||% c(
+      "🌟 Local favorite worth exploring!",
+      "📅 Check online for current events",
+      "💬 Visitors recommend planning 1-2 hours",
+      "✨ Great spot to experience local culture"
+    )
+    
+    return(sample(theme_facts, 1))
+  }
   
   get_activities_for_date <- function(date, user_behavior) {
     activities <- list()
@@ -422,7 +714,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     })
   })
   
-  # Rest of your outputs remain the same...
+  # Personality outputs
   output$personality_title <- renderText({
     data <- personality_data()
     if (is.null(data)) return("You are a Melbourne Explorer!")
@@ -445,13 +737,5 @@ summary_server <- function(input, output, session, user_behavior, weather_module
   # Placeholder handlers
   observeEvent(input$export_pdf, {
     showNotification("PDF export will be implemented soon!", type = "message")
-  })
-  
-  observeEvent(input$prev_image, {
-    showNotification("Previous image - carousel to be implemented")
-  })
-  
-  observeEvent(input$next_image, {
-    showNotification("Next image - carousel to be implemented") 
   })
 }
