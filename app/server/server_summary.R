@@ -20,6 +20,14 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     }
   })
   
+  output$has_dates_selected <- reactive({
+    dates <- selected_dates()
+    length(dates) > 0
+  })
+  
+  # Required for conditionalPanel to work
+  outputOptions(output, "has_dates_selected", suspendWhenHidden = FALSE)
+  
   # Get selected dates from weather module - default to current week if none selected
   selected_dates <- reactive({
     # Try to get dates from weather module first
