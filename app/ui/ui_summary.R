@@ -506,6 +506,88 @@ div(
         line-height: 1.5;
         margin-bottom: 10px;
       }
+
+      /* NEW: Select dates card styling - LARGER TEXT AND BETTER LAYOUT */
+      #summary-tab-content .select-dates-card {
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 15px;
+        padding: 60px 40px;
+        margin-bottom: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 450px;
+      }
+
+      #summary-tab-content .select-dates-card h4 {
+        color: #036B55;
+        font-size: 2.5rem;
+        margin-bottom: 30px;
+        font-weight: 700;
+        text-align: center;
+        width: 100%;
+        line-height: 1.2;
+      }
+
+      #summary-tab-content .select-dates-card p {
+        color: #666;
+        font-size: 1.5rem;
+        line-height: 1.6;
+        margin-bottom: 25px;
+        text-align: center;
+        width: 100%;
+        max-width: 700px;
+        font-weight: 400;
+      }
+
+      #summary-tab-content .select-dates-card .instruction-list {
+        text-align: center;
+        max-width: 600px;
+        margin: 35px auto;
+        font-size: 1.4rem;
+        width: 100%;
+      }
+
+      #summary-tab-content .select-dates-card .instruction-list ul {
+        display: inline-block;
+        text-align: left;
+        margin: 0 auto;
+        padding: 0;
+        list-style: none;
+      }
+
+      #summary-tab-content .select-dates-card .instruction-list li {
+        margin-bottom: 20px;
+        line-height: 1.6;
+        font-size: 1.3rem;
+        color: #555;
+        font-weight: 400;
+        padding-left: 30px;
+        position: relative;
+      }
+
+      #summary-tab-content .select-dates-card .instruction-list li:before {
+        content: '•';
+        color: #036B55;
+        font-size: 2rem;
+        position: absolute;
+        left: 0;
+        top: -2px;
+      }
+
+      #summary-tab-content .select-dates-card .instruction-list li:last-child {
+        margin-bottom: 0;
+      }
+
+      #summary-tab-content .select-dates-card .export-button {
+        margin-top: 25px;
+        font-size: 1.3rem;
+        padding: 15px 40px;
+      }
     ")
     ),
     tags$script(
@@ -543,9 +625,11 @@ div(
     ))
   ),
   
-  # ITINERARY SECTION - ONLY SHOW WHEN DATES SELECTED
+  # SHOW WHEN DATES ARE SELECTED: Itinerary and Carousel
   conditionalPanel(
     condition = "output.has_dates_selected",
+    
+    # ITINERARY SECTION
     div(
       class = "itinerary-section",
       h4("Your Recommended Itinerary"),
@@ -554,22 +638,19 @@ div(
         class = "itinerary-scroll-container", 
         uiOutput("itinerary_table")
       )
-    )
-  ),
-  
-  # CAROUSEL SECTION - ONLY SHOW WHEN DATES SELECTED
-  conditionalPanel(
-    condition = "output.has_dates_selected",
+    ),
+    
+    # CAROUSEL SECTION
     div(
       class = "top-combined-section",
       
-      # Carousel Section - Now below itinerary
+      # Carousel Section
       div(
         class = "carousel-section", 
         uiOutput("activity_carousel")
       ),
       
-      # Download Summary Button - Centered with less space
+      # Download Summary Button
       fluidRow(
         column(
           12,
@@ -577,6 +658,25 @@ div(
           actionButton("export_pdf", "Download Summary PDF", class = "export-button")
         )
       )
+    )
+  ),
+  
+  # SHOW WHEN NO DATES SELECTED: Instruction card - LARGER TEXT AND BETTER LAYOUT
+  conditionalPanel(
+    condition = "!output.has_dates_selected",
+    div(
+      class = "select-dates-card",
+      h4("📅 Plan Your Melbourne Adventure"),
+      p("To get started with your personalized itinerary:"),
+      div(
+        class = "instruction-list",
+        tags$ul(
+          tags$li("Visit the Weather Summary tab to select your travel dates"),
+          tags$li("Choose activities that interest you in the Explore tab"),
+          tags$li("Your recommended itinerary will appear here automatically")
+        )
+      ),
+      p("Once you've selected dates, you'll see daily recommendations that you can click to explore related places!"),
     )
   )
 )
