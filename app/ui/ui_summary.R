@@ -543,35 +543,39 @@ div(
     ))
   ),
   
-  # ITINERARY SECTION MOVED TO TOP
-  div(
-    class = "itinerary-section",
-    h4("Your Recommended Itinerary"),
-    p("Click on any day to discover related places!", style = "text-align: center; color: #666; margin-bottom: 15px;"),
+  # ITINERARY SECTION - ONLY SHOW WHEN DATES SELECTED
+  conditionalPanel(
+    condition = "output.has_dates_selected",
     div(
-      class = "itinerary-scroll-container", 
-      uiOutput("itinerary_table")
-      # REMOVED conditionalPanel - handle empty state in renderUI
+      class = "itinerary-section",
+      h4("Your Recommended Itinerary"),
+      p("Click on any day to discover related places!", style = "text-align: center; color: #666; margin-bottom: 15px;"),
+      div(
+        class = "itinerary-scroll-container", 
+        uiOutput("itinerary_table")
+      )
     )
   ),
   
-  # CAROUSEL SECTION MOVED TO BOTTOM
-  div(
-    class = "top-combined-section",
-    
-    # Carousel Section - Now below itinerary
+  # CAROUSEL SECTION - ONLY SHOW WHEN DATES SELECTED
+  conditionalPanel(
+    condition = "output.has_dates_selected",
     div(
-      class = "carousel-section", 
-      uiOutput("activity_carousel")
-      # REMOVED conditionalPanel - always show carousel
-    ),
-    
-    # Download Summary Button - Centered with less space
-    fluidRow(
-      column(
-        12,
-        style = "text-align: center; margin-top: 5px;", 
-        actionButton("export_pdf", "Download Summary PDF", class = "export-button")
+      class = "top-combined-section",
+      
+      # Carousel Section - Now below itinerary
+      div(
+        class = "carousel-section", 
+        uiOutput("activity_carousel")
+      ),
+      
+      # Download Summary Button - Centered with less space
+      fluidRow(
+        column(
+          12,
+          style = "text-align: center; margin-top: 5px;", 
+          actionButton("export_pdf", "Download Summary PDF", class = "export-button")
+        )
       )
     )
   )
