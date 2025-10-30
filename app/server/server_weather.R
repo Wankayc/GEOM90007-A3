@@ -53,22 +53,23 @@ read_bom_month <- function(path) {
     show_col_types = FALSE
   )
   
+  # Use the actual column names from the file (with encoding issues)
   df <- df |>
     dplyr::mutate(date = as.Date(Date)) |>
     transmute(
       date,
-      tmin = `Minimum temperature (°C)`,
-      tmax = `Maximum temperature (°C)`,
+      tmin = `Minimum temperature (ï¿½C)`,
+      tmax = `Maximum temperature (ï¿½C)`,
       rain = `Rainfall (mm)`,
       sun  = `Sunshine (hours)`,
-      t9   = `9am Temperature (°C)`,
-      t3   = `3pm Temperature (°C)`,
+      t9   = `9am Temperature (ï¿½C)`,
+      t3   = `3pm Temperature (ï¿½C)`,
       rh9  = `9am relative humidity (%)`,
       rh3  = `3pm relative humidity (%)`,
       ws9  = `9am wind speed (km/h)`,
       ws3  = `3pm wind speed (km/h)`,
-      cl9   = `9am cloud amount (oktas)`,
-      cl3   = `3pm cloud amount (oktas)`
+      cl9  = `9am cloud amount (oktas)`,
+      cl3  = `3pm cloud amount (oktas)`
     )
   
   num_cols <- c("tmin",
