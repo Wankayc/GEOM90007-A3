@@ -1,3 +1,4 @@
+# Main server for app
 server <- function(input, output, session) {
   
   # for carousel redirection to map
@@ -58,7 +59,7 @@ server <- function(input, output, session) {
     first_load = TRUE
   )
   
-  # Server logic
+  # ---- Server logic ----------------------------------------------------------
   
   source("server/server_weather.R", local = TRUE)
   session$userData$calendar_feed <- calendar_feed

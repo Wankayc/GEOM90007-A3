@@ -1,15 +1,4 @@
-# Weather server logic will go here
-library(dplyr)
-library(readr)
-library(stringr)
-library(lubridate)
-library(tibble)
-library(purrr)
-library(bslib)
-library(shinyWidgets)
-library(sortable)
-
-
+# Weather server logic
 
 # Summarise metrics for a selected period
 summarise_period_box <- function(feed, start_date, end_date) {
@@ -31,11 +20,10 @@ summarise_period_box <- function(feed, start_date, end_date) {
   )
 }
 
-#------------------------------------------------------------#
+#----------- Data processing ---------------------------------------------------
 # File paths
 BOM_DIR  <- here("data", "raw", "weather_and_air")
 SENSOR_CSV <- here("data", "raw", "weather_and_air", "microclimate-sensors-data.csv")
-
 
 # BOM loader
 read_bom_month <- function(path) {
@@ -119,7 +107,7 @@ read_bom_range <- function(dir_path) {
   dplyr::bind_rows(purrr::map(files, read_bom_month)) |> dplyr::arrange(date)
 }
 
-## Data preprocessing 
+# Data preprocessing 
 bom_daily <- read_bom_range(BOM_DIR)
 
 bom_for_join <- bom_daily |>
@@ -144,21 +132,21 @@ make_calendar_feed <- function(bom_for_join, sensor_daily) {
       pm25_mean,  pm25_min,  pm25_max,
       pm10_mean,  pm10_min,  pm10_max,
       noise_mean, noise_min, noise_max,
-      airtemperature_bom,relativehumidity_bom,averagewindspeed_bom,averagecloud_bom,
+      airtemperature_bom, relativehumidity_bom, averagewindspeed_bom, averagecloud_bom,
       tmin, tmax, rain,
-      sun, t9, rh9, cl9, ws9, t3, rh3, cl3, ws3 # added
+      sun, t9, rh9, cl9, ws9, t3, rh3, cl3, ws3
     )
 }
 
 calendar_feed <- make_calendar_feed(bom_for_join, sensor_daily)
 
-#------------------------------------------------------------#
+#------- Main Activity ---------------------------------------------------------
 
 trip_tab_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Activity list (all)
+    # Activity list
     activities <- tibble::tibble(
       key   = c("barbecue","hiking","picnic","climbing","swimming",
                 "museum","exhibition","cafe"),
@@ -167,11 +155,12 @@ trip_tab_server <- function(id) {
       type  = c(rep("outdoor",5), rep("indoor",3))
     )
     
-    # to handle emoji -> convert UTF-8
+    # Handle emoji encoding
     activities$label <- enc2utf8(activities$label)
     
     label_to_key <- setNames(activities$key, activities$label)
     outdoor_keys <- activities |> dplyr::filter(type=="outdoor") |> dplyr::pull(key)
+    
     to_keys <- function(lbls) {
       v <- unname(label_to_key[lbls])
       v[is.na(v)] <- lbls
@@ -239,7 +228,6 @@ trip_tab_server <- function(id) {
               span(class="cap","Sunshine")
           ),
           
-          
           # PM2.5 / PM10
           div(class="chip stack",
               div(class="row1",
@@ -258,12 +246,10 @@ trip_tab_server <- function(id) {
     
     # Advisory function for warnings only
     day_advice <- function(row, acts_labels){
-      
       if (nrow(row) == 0 || length(acts_labels) == 0) return(NULL)
       
       acts_keys <- unname(label_to_key[acts_labels])
       acts_keys <- acts_keys[!is.na(acts_keys)]
-      
       if (length(acts_keys) == 0) return(NULL)
       
       rainy <- !is.na(row$rain) && row$rain >= 1
@@ -273,19 +259,12 @@ trip_tab_server <- function(id) {
       msgs <- character()
       is_outdoor <- any(acts_keys %in% outdoor_keys)
       
-      if (rainy && is_outdoor)
-        msgs <- c(msgs, "☔ Rain expected — bring an umbrella.")
-      if (!is.na(maxT) && maxT < 12 && any(acts_keys %in% c("swimming","picnic","hiking")))
-        msgs <- c(msgs, "🧥 It's quite cold for outdoor activities.")
-      if (!is.na(maxT) && maxT >= 32 && any(acts_keys %in% c("hiking","climbing","barbecue","picnic")))
-        msgs <- c(msgs, "🥵 Very hot — stay hydrated and take breaks.")
-      if (!is.na(pm25) && pm25 > 35 && is_outdoor)
-        msgs <- c(msgs, "😷 Poor air quality — wear a mask.")
+      if (rainy && is_outdoor) msgs <- c(msgs, "☔ Rain expected — bring an umbrella.")
+      if (!is.na(maxT) && maxT < 12 && any(acts_keys %in% c("swimming","picnic","hiking"))) msgs <- c(msgs, "🧥 It's quite cold for outdoor activities.")
+      if (!is.na(maxT) && maxT >= 32 && any(acts_keys %in% c("hiking","climbing","barbecue","picnic"))) msgs <- c(msgs, "🥵 Very hot — stay hydrated and take breaks.")
+      if (!is.na(pm25) && pm25 > 35 && is_outdoor) msgs <- c(msgs, "😷 Poor air quality — wear a mask.")
       
-      if (length(msgs) == 0) {
-        return(NULL)
-      }
-      
+      if (length(msgs) == 0) return(NULL)
       div(class="advice-warn", paste(msgs, collapse=" "))
     }
     
@@ -296,7 +275,7 @@ trip_tab_server <- function(id) {
       validate(need(diff(rng) <= 6, "You can select up to 7 days."))
       dates <- seq(rng[1], rng[2], by = "day")
       
-      # Update the session data for summary tab
+      # Update session data for summary tab
       session$userData$weather_dates <- dates
       if (!is.null(session$parent)) {
         session$parent$userData$weather_dates <- dates
@@ -347,16 +326,13 @@ trip_tab_server <- function(id) {
               meanT <- coalesce(r$airtemperature_bom, (r$tmin + r$tmax)/2)
               
               div(class="row-card",
-                  # date
                   div(class="date", format(r$date, "%a %d %b")),
-                  # weather emoji + text
                   div(class="wx",
                       span(weather_emoji(r$rain, r$tmax)),
                       span(weather_label(r$rain, r$tmax))
                   ),
                   
                   div(class="chips summary-metrics",
-                      # Temp
                       div(class="chip stack",
                           div(class="row1",
                               span(class="ico","🌡️"),
@@ -369,7 +345,6 @@ trip_tab_server <- function(id) {
                           ),
                           span(class="cap","Temp")
                       ),
-                      # Rain
                       div(class="chip stack",
                           div(class="row1",
                               span(class="ico", "🌧️"),
@@ -377,7 +352,6 @@ trip_tab_server <- function(id) {
                           ),
                           span(class="cap","Rainfall")
                       ),
-                      # Wind
                       div(class="chip stack",
                           div(class="row1",
                               span(class="ico", "💨"),
@@ -386,7 +360,6 @@ trip_tab_server <- function(id) {
                           ),
                           span(class="cap","Wind")
                       ),
-                      # Sunshine
                       div(class="chip stack",
                           div(class="row1",
                               span(class="ico","✨"),
@@ -394,7 +367,6 @@ trip_tab_server <- function(id) {
                           ),
                           span(class="cap","Sunshine")
                       ),
-                      # PM
                       div(class="chip stack",
                           div(class="row1",
                               span(class="ico", pm_icon(r$pm25_mean)),
@@ -414,7 +386,7 @@ trip_tab_server <- function(id) {
       )
     })
     
-    # Always show all activity options
+    # Activity lists
     output$outdoor_list <- renderUI({
       outs <- activities |> filter(type=="outdoor") |> pull(label)
       rank_list(
@@ -423,6 +395,7 @@ trip_tab_server <- function(id) {
         options = sortable_options(group = list(name="act", pull="clone", put=FALSE))
       )
     })
+    
     output$indoor_list <- renderUI({
       ins <- activities |> filter(type=="indoor") |> pull(label)
       rank_list(
@@ -438,7 +411,6 @@ trip_tab_server <- function(id) {
       div(class="itinerary-row",
           lapply(ds, function(d){
             row <- calendar_feed |> dplyr::filter(date == d) |> dplyr::slice(1)
-            # NOW USES SHARED FUNCTIONS
             wx_ico <- if (nrow(row)) weather_emoji(row$rain, row$tmax) else "⛅️"
             wx_txt <- if (nrow(row)) weather_label(row$rain, row$tmax) else "Cloudy"
             
@@ -468,38 +440,32 @@ trip_tab_server <- function(id) {
                       }
                     "),
                     onAdd = htmlwidgets::JS("
-                    function(evt){
-                      var list = evt.to;
-                      var el   = evt.item;
-                      if (!list || !list.id || !el) return;
-                
-                      var label = (el.textContent || '').trim();
-                      var dup = Array.from(list.querySelectorAll('.rank-list-item'))
-                        .some(function(n){ return n !== el && (n.textContent || '').trim() === label; });
-                
-                      if (dup){
-                        if (el.parentNode) el.parentNode.removeChild(el); // remve
+                      function(evt){
+                        var list = evt.to;
+                        var el   = evt.item;
+                        if (!list || !list.id || !el) return;
+                        var label = (el.textContent || '').trim();
+                        var dup = Array.from(list.querySelectorAll('.rank-list-item'))
+                          .some(function(n){ return n !== el && (n.textContent || '').trim() === label; });
+                        if (dup){
+                          if (el.parentNode) el.parentNode.removeChild(el);
+                        }
+                        var items = Array.from(list.querySelectorAll('.rank-list-item'));
+                        items.sort(function(a,b){
+                          var ta = (a.textContent || '').trim().toLowerCase();
+                          var tb = (b.textContent || '').trim().toLowerCase();
+                          return ta.localeCompare(tb);
+                        });
+                        items.forEach(function(n){ list.appendChild(n); });
+                        if (typeof pushState === 'function') pushState($(list));
                       }
-                
-                      // sort by alphabet
-                      var items = Array.from(list.querySelectorAll('.rank-list-item'));
-                      items.sort(function(a,b){
-                        var ta = (a.textContent || '').trim().toLowerCase();
-                        var tb = (b.textContent || '').trim().toLowerCase();
-                        return ta.localeCompare(tb);
-                      });
-                      items.forEach(function(n){ list.appendChild(n); });
-                
-                      // synchronised
-                      if (typeof pushState === 'function') pushState($(list));
-                    }
-                  "),
+                    "),
                     onRemove = htmlwidgets::JS("
-                    function(evt){ // moved away
-                      var from = evt.from;
-                      if (from && from.id) pushState($(from));
-                    }
-                  ")
+                      function(evt){
+                        var from = evt.from;
+                        if (from && from.id) pushState($(from));
+                      }
+                    ")
                   )
                 ),
                 uiOutput(ns(paste0("advice_", d)))
@@ -514,7 +480,6 @@ trip_tab_server <- function(id) {
       lapply(ds, function(d){
         local({
           dd <- d
-          
           observeEvent(
             {
               input[[paste0("board_", dd)]]
@@ -525,51 +490,36 @@ trip_tab_server <- function(id) {
             {
               output[[paste0("advice_", dd)]] <- renderUI({
                 labels <- input[[paste0("board_", dd)]] %||% character(0)
-                
-                # for debugging
-                # cat("Date:", dd, "| Activities:", length(labels), "| Labels:", paste(labels, collapse=", "), "\n")
-                
                 has_out <- input[[paste0("board_", dd, "_has_outdoor")]]
                 if (identical(has_out, FALSE)) return(NULL)
-                
-                # If no outdoor activities, hide advice
-                if (!is_outdoor_present(labels)) {
-                  return(NULL)
-                }
+                if (!is_outdoor_present(labels)) return(NULL)
                 
                 wx <- calendar_feed |> dplyr::filter(date == dd) |> dplyr::slice(1)
-                
-                # Pass only outdoor activity labels to day_advice
                 keys <- to_keys(labels)
                 outdoor_labels <- labels[keys %in% outdoor_keys]
                 advice_result <- day_advice(wx, outdoor_labels)
-                
-                # for debugging
-                #cat("Advice result is NULL:", is.null(advice_result), "\n")
                 
                 if (is.null(advice_result)) return(NULL)
                 advice_result
               })
             },
-            ignoreNULL = FALSE,  # Changed to FALSE to track removals
-            ignoreInit = FALSE   # Changed to FALSE to show advice on initial load
+            ignoreNULL = FALSE,
+            ignoreInit = FALSE
           )
         })
       })
     })
     
-    # Return reactive values for external access
+    # Return reactive values for external access (for summary tab)
     return(
       list(
         selected_dates = reactive(sel_dates()),
-        # NEW: Get activities for a specific date using theme_data
         get_activities_for_date = function(date) {
           date_str <- as.character(date)
           input_id <- paste0("board_", date_str)
           activity_labels <- input[[input_id]] %||% character(0)
           
           if (length(activity_labels) > 0) {
-            # Map activity labels to theme_data categories
             activity_to_theme <- list(
               "🏛️ museum" = c("Arts & Culture", "Heritage"),
               "🖼️ exhibition" = c("Arts & Culture"),
@@ -581,32 +531,26 @@ trip_tab_server <- function(id) {
               "🏊️ swimming" = c("Leisure", "Sports")
             )
             
-            # Get all relevant themes for the selected activities
             relevant_themes <- unique(unlist(activity_to_theme[activity_labels]))
             
             if (length(relevant_themes) > 0) {
-              # Find matching places from theme_data
               matching_places <- theme_data %>%
                 filter(Theme %in% relevant_themes) %>%
                 distinct(Name, .keep_all = TRUE) %>%
-                # Use date to create consistent but varied selection
                 slice_sample(n = min(3, nrow(.))) %>%
                 arrange(Name)
               
-              # Convert to activity format
               if (nrow(matching_places) > 0) {
                 activities <- lapply(1:nrow(matching_places), function(i) {
                   place <- matching_places[i, ]
                   
-                  place_name <- if (!is.null(place$Name)) place$Name else "Melbourne Activity"
-                  place_subtheme <- if (!is.null(place$Sub_Theme)) place$Sub_Theme else "Activity"
-                  place_rating <- if (!is.null(place$Google_Rating)) place$Google_Rating else NA
+                  place_name <- place$Name %||% "Melbourne Activity"
+                  place_subtheme <- place$Sub_Theme %||% "Activity"
+                  place_rating <- place$Google_Rating
                   
-                  # Create appropriate time slots
                   time_slots <- c("9:00 AM - 11:00 AM", "1:00 PM - 3:00 PM", "4:00 PM - 6:00 PM")
                   time_slot <- time_slots[min(i, length(time_slots))]
                   
-                  # Special timing for food places
                   if (!is.null(place$Theme) && place$Theme == "Food & Drink") {
                     if (grepl("cafe|coffee", place_subtheme, ignore.case = TRUE)) {
                       time_slot <- if (i == 1) "9:00 AM - 11:00 AM" else "3:00 PM - 5:00 PM"
@@ -630,8 +574,7 @@ trip_tab_server <- function(id) {
               }
             }
           }
-          
-          list() # Return empty list if no activities or no matches
+          list()
         }
       )
     )
