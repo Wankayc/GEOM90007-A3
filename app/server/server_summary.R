@@ -1,8 +1,7 @@
+# Summary server
 summary_server <- function(input, output, session, user_behavior, weather_module = NULL) {
   
-  # ============================================================================
-  # REACTIVE DATA & STATE MANAGEMENT
-  # ============================================================================
+  #  ------ Reactive data and state management ---------------------------------
   
   # Weather data
   weather_data <- reactive({
@@ -75,9 +74,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     })
   })
   
-  # ============================================================================
-  # OBSERVERS & EVENT HANDLERS
-  # ============================================================================
+  # ------- Observers and Event Handlers ---------------------------------------
   
   # Update itinerary when dates change
   observe({
@@ -153,9 +150,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     }
   })
   
-  # ============================================================================
-  # RENDER OUTPUTS
-  # ============================================================================
+  #  --------- Render outputs --------------------------------------------------
   
   output$has_dates_selected <- reactive({
     length(selected_dates()) > 0
@@ -208,9 +203,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     if (is.null(data)) "Start clicking categories to discover your Melbourne personality!" else data$description
   })
   
-  # ============================================================================
-  # CAROUSEL MANAGEMENT
-  # ============================================================================
+  # -------- Carousel Management -----------------------------------------------
   
   carousel_page <- reactiveVal(1)
   
@@ -270,9 +263,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     data$related_places[start_index:end_index, ]
   })
   
-  # ============================================================================
-  # HELPER FUNCTIONS
-  # ============================================================================
+  # ------ Helper functions ----------------------------------------------------
   
   get_weather_for_date_safe <- function(date) {
     tryCatch({
@@ -359,9 +350,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     if (length(tips) > 0) tips[1] else character(0)
   }
   
-  # ============================================================================
-  # UI COMPONENT FUNCTIONS
-  # ============================================================================
+  # ------ UI component functions (Empty state handling) -----------------------
   
   empty_itinerary_message <- function() {
     div(
@@ -574,9 +563,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     )
   }
   
-  # ============================================================================
-  # PERSONALITY SYSTEM FUNCTIONS
-  # ============================================================================
+  # ------- PERSONALITY FUNCTIONS ----------------------------------------------
   
   calculate_personality_scores <- function(clicks) {
     list(
@@ -626,9 +613,7 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     )
   }
   
-  # ============================================================================
-  # ACTIVITY PLANNING FUNCTIONS
-  # ============================================================================
+  # ------- Activity Planning functions ----------------------------------------
   
   get_activities_for_date <- function(date, user_behavior) {
     tryCatch({
