@@ -468,7 +468,6 @@ summary_server <- function(input, output, session, user_behavior, weather_module
       div(
         class = "carousel-header",
         h4(header_text),
-        p(subtitle_text, style = "margin: 5px 0 0 0; color: #666; font-size: 1rem;")
       ),
       
       div(
