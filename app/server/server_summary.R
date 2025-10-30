@@ -442,20 +442,6 @@ summary_server <- function(input, output, session, user_behavior, weather_module
     )
   }
   
-  carousel_placeholder <- function() {
-    div(
-      class = "carousel-placeholder",
-      h4("🎯 Discover Your Perfect Melbourne Experience"),
-      p("Click on any day in your itinerary above to see personalized recommendations!"),
-      p("Don't see any activities? Start by:"),
-      tags$ul(
-        tags$li("Exploring categories that interest you"),
-        tags$li("Selecting your travel dates in the Weather tab"),
-        tags$li("Building your preferences to get tailored suggestions")
-      )
-    )
-  }
-  
   create_carousel_ui <- function(data) {
     current_items <- current_page_items()
     current_page <- carousel_page()
