@@ -6,7 +6,7 @@
 "Temperature, humidity, wind, pressure and rainfall observations are from Melbourne (Olympic Park) {station 086338}"
 "Cloud, evaporation and sunshine observations are from Melbourne Airport {station 086282}"
 
-,"Date","Minimum temperature (°C)","Maximum temperature (°C)","Rainfall (mm)","Evaporation (mm)","Sunshine (hours)","Direction of maximum wind gust ","Speed of maximum wind gust (km/h)","Time of maximum wind gust","9am Temperature (°C)","9am relative humidity (%)","9am cloud amount (oktas)","9am wind direction","9am wind speed (km/h)","9am MSL pressure (hPa)","3pm Temperature (°C)","3pm relative humidity (%)","3pm cloud amount (oktas)","3pm wind direction","3pm wind speed (km/h)","3pm MSL pressure (hPa)"
+,"Date","Minimum temperature (ï¿½C)","Maximum temperature (ï¿½C)","Rainfall (mm)","Evaporation (mm)","Sunshine (hours)","Direction of maximum wind gust ","Speed of maximum wind gust (km/h)","Time of maximum wind gust","9am Temperature (ï¿½C)","9am relative humidity (%)","9am cloud amount (oktas)","9am wind direction","9am wind speed (km/h)","9am MSL pressure (hPa)","3pm Temperature (ï¿½C)","3pm relative humidity (%)","3pm cloud amount (oktas)","3pm wind direction","3pm wind speed (km/h)","3pm MSL pressure (hPa)"
 ,2024-09-1,14.2,20.4,0.2,5.8,10.1,NNW,61,22:12,15.6,60,5,NNW,24,1003.9,19.1,52,5,NNW,20,1002.4
 ,2024-09-2,9.5,13.5,2.8,8.2,6.1,SW,74,02:47,10.6,55,2,WNW,20,1010.1,9.4,75,2,W,13,1016.8
 ,2024-09-3,8.3,16.8,2.4,3.8,4.3,NNW,24,10:39,11.7,69,7,NW,9,1030.8,16.4,49,1,S,7,1028.6
