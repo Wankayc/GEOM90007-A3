@@ -2,15 +2,16 @@
 
 current_sub_theme <- reactiveVal(NULL)
 
-# Create a reactive variable to share selected sub_theme with map module
+# Reactive variable to share selected sub_theme with map module
 selected_sub_theme_for_map <- reactiveVal(NULL)
 
-# Create a reactive variable to store Top N ranking data for map
+# Reactive variable to store Top N ranking data for map
 top_places_for_map <- reactiveVal(NULL)
 
-# Create a trigger to force map refresh (increments on each "View on Map" click)
+# Trigger to force map refresh (increments on each "View on Map" click)
 map_refresh_trigger <- reactiveVal(0)
 
+# Resize visualization when navigating between tabs
 observeEvent(input$nav, {
   runjs('dispatchEvent(new Event("resize"))')
 })
@@ -19,24 +20,23 @@ observeEvent(input$nav, {
 output$dynamic_subcloud_title <- renderUI({
   selected_theme <- input$themeSingle
   if (is.null(selected_theme)) {
-    h2(class='section-lead sub-cloud-title', 'Highlights in This Category')
+    h2(class = 'section-lead sub-cloud-title', 'Highlights in This Category')
   } else {
-    h2(class='section-lead sub-cloud-title', 
-       paste0('Highlights in ', selected_theme))
+    h2(class = 'section-lead sub-cloud-title', paste0('Highlights in ', selected_theme))
   }
 })
 
+# Dynamic description for sub word cloud section
 output$dynamic_subcloud_desc <- renderUI({
   selected_theme <- input$themeSingle
   if (is.null(selected_theme)) {
     desc_text <- 'Click on any attraction type to view the highest-rated places.'
   } else {
-    desc_text <- paste0('Exploring ', selected_theme, 
+    desc_text <- paste0('Exploring ',
+                        selected_theme,
                         ' - Click on any attraction type to view rankings.')
   }
-  p(class='section-desc sub-cloud-desc', 
-    style='color:#666; font-size:14px; line-height:1.6; margin-bottom:16px;',
-    desc_text)
+  p(class = 'section-desc sub-cloud-desc', style = 'color:#666; font-size:14px; line-height:1.6; margin-bottom:16px;', desc_text)
 })
 
 # Dynamic title for ranking section
@@ -52,42 +52,49 @@ output$dynamic_ranking_title <- renderUI({
     title_text <- paste0('Top Rated ', sub_theme)
   }
   
-  h2(title_text, style='display:inline-block; margin-right:0px;')
+  h2(title_text, style = 'display:inline-block; margin-right:0px;')
 })
 
-# Main wordcloud
+# Handle main wordcloud click - navigate to Popular Attractions tab
 observeEvent(input$mainCloudViz_mark_selection_changed, {
   selected_theme <- input$mainCloudViz_mark_selection_changed$Theme[1]
-  if (is.null(selected_theme)) return()
+  if (is.null(selected_theme))
+    return()
   
   updateNavbarPage(session, 'nav', selected = 'Popular Attractions')
   updateRadioButtons(session, 'themeSingle', selected = selected_theme)
   
-  runjs(sprintf('
+  # Apply filter to sub-cloud visualization
+  runjs(
+    sprintf(
+      '
       (function(){
         let viz = document.getElementById("subCloudViz");
         if(!viz || !viz.workbook) return;
         let sheet = viz.workbook.activeSheet;
         sheet.applyFilterAsync("Theme", ["%s"], FilterUpdateType.Replace);
       })();
-    ', gsub("'", "\\\\'", selected_theme)))
+    ',
+      gsub("'", "\\\\'", selected_theme)
+    )
+  )
 })
 
-# Click Theme to jump to the sub theme wordcloud
+# Handle theme selection - apply filter to sub-cloud
 observeEvent(input$themeSingle, {
   req(input$themeSingle)
   
   # Skip personality tracking on first load
-  if (exists("user_behavior") && !is.null(user_behavior) && isTRUE(user_behavior$first_load)) {
+  if (exists("user_behavior") &&
+      !is.null(user_behavior) && isTRUE(user_behavior$first_load)) {
     user_behavior$first_load <- FALSE
     return()
   }
   
-  # --------- Personality tracking ----------
-  # This covers both direct radio button clicks AND wordcloud clicks that update radios
+  # Personality tracking for category clicks
   category_mapping <- list(
     "Accommodation" = "accommodation",
-    "Transport" = "transport", 
+    "Transport" = "transport",
     "Attractions" = "attractions",
     "Arts & Culture" = "arts_culture",
     "Food & Drink" = "food_drink",
@@ -105,46 +112,61 @@ observeEvent(input$themeSingle, {
     }
   }
   
-  runjs(sprintf('
+  # Apply filter to sub-cloud visualization
+  runjs(
+    sprintf(
+      '
       (function(){
         let viz = document.getElementById("subCloudViz");
         if(!viz || !viz.workbook) return;
         let sheet = viz.workbook.activeSheet;
         sheet.applyFilterAsync("Theme", ["%s"], FilterUpdateType.Replace);
       })();
-    ', gsub("'", "\\\\'", input$themeSingle)))
+    ',
+      gsub("'", "\\\\'", input$themeSingle)
+    )
+  )
 })
 
-# Click sub theme to define Sub_Theme
+# Handle sub-theme wordcloud click
 observeEvent(input$subCloudViz_mark_selection_changed, {
   click_data <- input$subCloudViz_mark_selection_changed
-  if (is.null(click_data) || length(click_data) == 0) return()
+  if (is.null(click_data) || length(click_data) == 0)
+    return()
   
+  # Extract selected sub-theme from various possible field names
   selected_sub <- NULL
   possible_names <- c("Sub Theme", "Sub_Theme", "Sub-Theme", "SUB THEME")
+  
   for (field_name in possible_names) {
-    if (!is.null(click_data[[field_name]]) && length(click_data[[field_name]]) > 0) {
-      selected_sub <- as.character(click_data[[field_name]][1]); break
+    if (!is.null(click_data[[field_name]]) &&
+        length(click_data[[field_name]]) > 0) {
+      selected_sub <- as.character(click_data[[field_name]][1])
+      break
     }
   }
+  
+  # Fallback: try any field that might contain the value
   if (is.null(selected_sub) && length(click_data) > 0) {
     for (field_name in names(click_data)) {
       tryCatch({
         val <- click_data[[field_name]][1]
-        if (!is.null(val) && !is.na(val) && nchar(as.character(val)) > 0) {
-          selected_sub <- as.character(val); break
+        if (!is.null(val) &&
+            !is.na(val) && nchar(as.character(val)) > 0) {
+          selected_sub <- as.character(val)
+          break
         }
-      }, error = function(e) {})
+      }, error = function(e) {
+      })
     }
   }
   
-  # Personality tracking
+  # Personality tracking for sub-theme clicks
   if (!is.null(selected_sub) && nchar(selected_sub) > 0) {
-    # Get the current theme to know which category we're in
     current_theme <- input$themeSingle
     category_mapping <- list(
       "Accommodation" = "accommodation",
-      "Transport" = "transport", 
+      "Transport" = "transport",
       "Attractions" = "attractions",
       "Arts & Culture" = "arts_culture",
       "Food & Drink" = "food_drink",
@@ -155,7 +177,8 @@ observeEvent(input$subCloudViz_mark_selection_changed, {
       "Health Services" = "health_services"
     )
     
-    if (!is.null(current_theme) && current_theme %in% names(category_mapping)) {
+    if (!is.null(current_theme) &&
+        current_theme %in% names(category_mapping)) {
       category_name <- category_mapping[[current_theme]]
       if (exists("user_behavior") && !is.null(user_behavior)) {
         user_behavior$category_clicks[[category_name]] <- user_behavior$category_clicks[[category_name]] + 1
@@ -163,19 +186,24 @@ observeEvent(input$subCloudViz_mark_selection_changed, {
     }
   }
   
-  if (!is.null(selected_sub) && nchar(selected_sub) > 0) current_sub_theme(selected_sub) else current_sub_theme(NULL)
+  # Update current sub-theme
+  if (!is.null(selected_sub) && nchar(selected_sub) > 0) {
+    current_sub_theme(selected_sub)
+  } else {
+    current_sub_theme(NULL)
+  }
 })
-
 
 # Handle "View on Map" button click
 observeEvent(input$showMapBtn, {
-  # Get the currently selected sub_theme
   sub_theme <- current_sub_theme()
   
-  # If no sub_theme is selected, show a warning notification
+  # Show warning if no sub-theme selected
   if (is.null(sub_theme)) {
     showNotification(
-      HTML("<b>No selection detected</b><br>Please select an attraction type first by clicking on the word cloud above."),
+      HTML(
+        "<b>No selection detected</b><br>Please select an attraction type first by clicking on the word cloud above."
+      ),
       type = "warning",
       duration = 4
     )
@@ -183,10 +211,10 @@ observeEvent(input$showMapBtn, {
   }
   
   # Ensure top_places_for_map has data before switching to map
-  # (In case the ranking hasn't been rendered yet)
   current_top_places <- top_places_for_map()
-  if (is.null(current_top_places) || nrow(current_top_places) == 0) {
-    # Generate the Top N data if not available
+  if (is.null(current_top_places) ||
+      nrow(current_top_places) == 0) {
+    # Generate Top N data if not available
     top_n_data <- theme_data %>%
       filter(Sub_Theme == sub_theme) %>%
       arrange(desc(Google_Rating)) %>%
@@ -197,14 +225,12 @@ observeEvent(input$showMapBtn, {
     }
   }
   
-  # 先跳转到地图页面
+  # Navigate to map page
   updateNavbarPage(session, 'nav', selected = 'Map')
   
+  # Update map data after navigation
   shinyjs::delay(800, {
-    # Update the sub_theme for map
     selected_sub_theme_for_map(sub_theme)
-    
-    # Increment trigger to force map refresh (even if sub_theme is the same)
     map_refresh_trigger(map_refresh_trigger() + 1)
     
     showNotification(
@@ -215,35 +241,47 @@ observeEvent(input$showMapBtn, {
   })
 })
 
-# The top 5-20 ranking
+# Generate Top N ranking visualization
 output$plot_ranking <- renderGirafe({
   sub_theme <- current_sub_theme()
   
+  # Show placeholder if no sub-theme selected
   if (is.null(sub_theme)) {
     p <- ggplot() +
-      annotate('text', x=0.5, y=0.52,
-               label='Click on a sub-theme above to view rankings',
-               size=6, color='#999', fontface='italic') +
-      annotate('text', x=0.5, y=0.48,
-               label='Select from the word cloud to explore top-rated places',
-               size=4.5, color='#bbb') +
+      annotate(
+        'text',
+        x = 0.5,
+        y = 0.52,
+        label = 'Click on a sub-theme above to view rankings',
+        size = 6,
+        color = '#999',
+        fontface = 'italic'
+      ) +
+      annotate(
+        'text',
+        x = 0.5,
+        y = 0.48,
+        label = 'Select from the word cloud to explore top-rated places',
+        size = 4.5,
+        color = '#bbb'
+      ) +
       theme_void()
-    return(girafe(ggobj=p, height_svg=8))
+    return(girafe(ggobj = p, height_svg = 8))
   }
   
+  # Special handling for specific sub-themes with duplicate names
   is_bbq_or_police <- sub_theme %in% c("BBQ", "Police Station", "Railway Station")
   
+  # Prepare ranking data
   ranking_data <- theme_data %>%
     filter(Sub_Theme == sub_theme) %>%
     arrange(desc(Google_Rating)) %>%
     head(as.numeric(input$topN)) %>%
     mutate(
-      Name = sub("^Barbeque - ", "", Name),    
+      Name = sub("^Barbeque - ", "", Name),
       Rank = row_number(),
       Name_clean = gsub("['\"`]", "", Name),
-      Name_trunc = ifelse(nchar(Name_clean) > 45,
-                          paste0(substr(Name_clean, 1, 45), "..."),
-                          Name_clean)
+      Name_trunc = ifelse(nchar(Name_clean) > 45, paste0(substr(Name_clean, 1, 45), "..."), Name_clean)
     ) %>%
     group_by(Name_clean) %>%
     mutate(
@@ -264,25 +302,30 @@ output$plot_ranking <- renderGirafe({
     arrange(Google_Rating_Display) %>%
     mutate(Name_display = factor(Name_display, levels = Name_display))
   
-  # Save the original data columns to top_places_for_map for map display
+  # Save data for map display
   if (nrow(ranking_data) > 0) {
-    # Extract only the original theme_data columns (before all the display processing)
-    top_places_for_map(ranking_data %>% 
-      select(any_of(names(theme_data))))
+    top_places_for_map(ranking_data %>% select(any_of(names(theme_data))))
   } else {
     top_places_for_map(NULL)
   }
   
+  # Show no data message if no results
   if (nrow(ranking_data) == 0) {
     p <- ggplot() +
-      annotate('text', x=0.5, y=0.5,
-               label=paste0('No data available for:\n', sub_theme),
-               size=5, color='#999', lineheight=1.3) +
+      annotate(
+        'text',
+        x = 0.5,
+        y = 0.5,
+        label = paste0('No data available for:\n', sub_theme),
+        size = 5,
+        color = '#999',
+        lineheight = 1.3
+      ) +
       theme_void()
-    return(girafe(ggobj=p, height_svg=8))
+    return(girafe(ggobj = p, height_svg = 8))
   }
   
-  # Get current theme for dynamic title
+  # Create plot title
   current_theme <- input$themeSingle
   plot_title <- if (!is.null(current_theme)) {
     paste0('Top ', input$topN, ' ', sub_theme, ' in ', current_theme)
@@ -290,54 +333,91 @@ output$plot_ranking <- renderGirafe({
     paste0('Top ', input$topN, ' Places in ', sub_theme)
   }
   
+  # Create interactive bar chart
   p <- ggplot(ranking_data) +
-    aes(x=Google_Rating_Display, y=Name_display,
-        tooltip=paste0(
-          '<b style="font-size:15px;color:#036B55;">', Name_clean, '</b><br>',
-          '<span style="color:#ddd;">━━━━━━━━━━━━━━━━</span><br>',
-          ifelse(!is.na(Business_address) & nchar(Business_address) > 0,
-                 paste0('<b>Address:</b> ', Business_address, '<br>'), ''),
-          '<b>Rating:</b> ',
-          ifelse(Has_Rating, 
-                 paste0('<span style="color:#FFD700;font-size:15px;font-weight:bold;">', 
-                        sprintf('%.1f', Google_Rating), '</span> / 5.0'), 
-                 '<span style="color:#ccc;">Not rated yet</span>'),
-          '<br>',
-          '<b>Category:</b> ', sub_theme,
-          ifelse(!is.null(current_theme),
-                 paste0('<br><b>Theme:</b> ', current_theme), '')
+    aes(
+      x = Google_Rating_Display,
+      y = Name_display,
+      tooltip = paste0(
+        '<b style="font-size:15px;color:#036B55;">',
+        Name_clean,
+        '</b><br>',
+        '<span style="color:#ddd;">━━━━━━━━━━━━━━━━</span><br>',
+        ifelse(
+          !is.na(Business_address) & nchar(Business_address) > 0,
+          paste0('<b>Address:</b> ', Business_address, '<br>'),
+          ''
         ),
-        data_id=Name_clean) +
+        '<b>Rating:</b> ',
+        ifelse(
+          Has_Rating,
+          paste0(
+            '<span style="color:#FFD700;font-size:15px;font-weight:bold;">',
+            sprintf('%.1f', Google_Rating),
+            '</span> / 5.0'
+          ),
+          '<span style="color:#ccc;">Not rated yet</span>'
+        ),
+        '<br>',
+        '<b>Category:</b> ',
+        sub_theme,
+        ifelse(
+          !is.null(current_theme),
+          paste0('<br><b>Theme:</b> ', current_theme),
+          ''
+        )
+      ),
+      data_id = Name_clean
+    ) +
     geom_bar_interactive(
-      aes(fill=Has_Rating, color=Has_Rating),
-      stat='identity', 
-      width=0.7,
-      alpha=0.9
+      aes(fill = Has_Rating, color = Has_Rating),
+      stat = 'identity',
+      width = 0.7,
+      alpha = 0.9
     ) +
-    scale_fill_manual(
-      values=c('TRUE'='#036B55', 'FALSE'='white'),
-      guide='none'
+    scale_fill_manual(values = c('TRUE' = '#036B55', 'FALSE' = 'white'),
+                      guide = 'none') +
+    scale_color_manual(values = c('TRUE' = '#036B55', 'FALSE' = '#036B55'),
+                       guide = 'none') +
+    geom_text(
+      aes(label = Rating_Label),
+      hjust = -0.25,
+      size = 12,
+      color = '#333',
+      fontface = 'bold'
     ) +
-    scale_color_manual(
-      values=c('TRUE'='#036B55', 'FALSE'='#036B55'),
-      guide='none'
+    scale_x_continuous(
+      limits = c(0, 5.5),
+      breaks = seq(0, 5, 1),
+      expand = c(0, 0)
     ) +
-    geom_text(aes(label=Rating_Label),
-              hjust=-0.25, size=12, color='#333', fontface='bold') +
-    scale_x_continuous(limits=c(0, 5.5), breaks=seq(0, 5, 1), expand=c(0, 0)) +
-    labs(x='Google Maps Rating', y='',
-         title=plot_title) +
+    labs(x = 'Google Maps Rating', y = '', title = plot_title) +
     theme(
       text = element_text(size = 28),
       panel.background = element_blank(),
       panel.grid.major.y = element_blank(),
-      panel.grid.major.x = element_line(color='#e5e5e5', linetype='dotted'),
+      panel.grid.major.x = element_line(color = '#e5e5e5', linetype = 'dotted'),
       panel.grid.minor = element_blank(),
       axis.ticks = element_blank(),
-      axis.text.y = element_text(size=30, color='#333', hjust=1, face='plain', margin=margin(r=12)),
-      axis.text.x = element_text(size=26, color='#666'),
-      axis.title.x = element_text(size=28, color='#666', margin=margin(t=20)),
-      plot.title = element_text(size=34, face='bold', color='#036B55', margin=margin(b=28)),
+      axis.text.y = element_text(
+        size = 30,
+        color = '#333',
+        hjust = 1,
+        face = 'plain',
+        margin = margin(r = 12)
+      ),
+      axis.text.x = element_text(size = 26, color = '#666'),
+      axis.title.x = element_text(
+        size = 28,
+        color = '#666',
+        margin = margin(t = 20)
+      ),
+      plot.title = element_text(
+        size = 34,
+        face = 'bold',
+        color = '#036B55',
+        margin = margin(b = 28)
+      ),
       plot.margin = margin(30, 70, 30, 30)
     )
   
@@ -346,20 +426,19 @@ output$plot_ranking <- renderGirafe({
     height_svg = 16,
     width_svg = 22,
     options = list(
-      opts_hover(css='fill:#05A882;stroke:#036B55;stroke-width:2px;cursor:pointer;'),
-      opts_tooltip(css='background-color:#036B55;color:white;padding:14px 18px;border-radius:6px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.25);line-height:1.6;', opacity=0.96)
+      opts_hover(css = 'fill:#05A882;stroke:#036B55;stroke-width:2px;cursor:pointer;'),
+      opts_tooltip(css = 'background-color:#036B55;color:white;padding:14px 18px;border-radius:6px;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.25);line-height:1.6;', opacity = 0.96)
     )
   )
 })
 
-# Personality Tracking - bar chart
+# Personality tracking for bar chart clicks
 observeEvent(input$plot_ranking_selected, {
   if (!is.null(input$plot_ranking_selected)) {
-    # Get the current sub-theme to know which category we're in
     current_theme <- input$themeSingle
     category_mapping <- list(
       "Accommodation" = "accommodation",
-      "Transport" = "transport", 
+      "Transport" = "transport",
       "Attractions" = "attractions",
       "Arts & Culture" = "arts_culture",
       "Food & Drink" = "food_drink",
@@ -370,7 +449,8 @@ observeEvent(input$plot_ranking_selected, {
       "Health Services" = "health_services"
     )
     
-    if (!is.null(current_theme) && current_theme %in% names(category_mapping)) {
+    if (!is.null(current_theme) &&
+        current_theme %in% names(category_mapping)) {
       category_name <- category_mapping[[current_theme]]
       if (exists("user_behavior") && !is.null(user_behavior)) {
         user_behavior$category_clicks[[category_name]] <- user_behavior$category_clicks[[category_name]] + 1

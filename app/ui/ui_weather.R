@@ -3,403 +3,419 @@
 trip_tab_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    div(class = "page-wrap",                    
-        h2("Trip-Weather Planner"),             
-        p(style = 'color:#666; font-size:14px; margin-bottom:16px; line-height:1.6;',
-          "Click on any date range below to explore weather conditions and plan your trip activities. ",
-          "Data sources: ",
-          tags$a("Melbourne Open Data Portal",
-                 href = "https://data.gov.au/data/dataset/microclimate-sensors-data",
-                 target = "_blank", style = "color:#036B55;"),
-          " and ",
-          tags$a("Australian Bureau of Meteorology",
-                 href = "https://www.bom.gov.au/jsp/ncc/cdio/calendar/climate-calendar?stn_num=086338&month=10&day=14",
-                 target = "_blank", style = "color:#036B55;")
+    div(
+      class = "page-wrap",
+      h2("Trip-Weather Planner"),
+      p(
+        style = 'color:#666; font-size:14px; margin-bottom:16px; line-height:1.6;',
+        "Click on any date range below to explore weather conditions and plan your trip activities. ",
+        "Data sources: ",
+        tags$a(
+          "Melbourne Open Data Portal",
+          href = "https://data.gov.au/data/dataset/microclimate-sensors-data",
+          target = "_blank",
+          style = "color:#036B55;"
         ),
-        
-        fluidRow(
-          column(
-            width = 4, class = "d-flex justify-content-center",  
-            div(class = "card p-3", 
-                airDatepickerInput(
-                  inputId = ns("range"),
-                  label = NULL,
-                  value = NULL,
-                  minDate = as.Date("2024-09-01"),
-                  maxDate = as.Date("2025-10-31"),
-                  range = TRUE, inline = TRUE, autoClose = TRUE,
-                  width = "100%"
-                )
-            )
-          ),
-          column(
-            width = 8,
-            div(class = "card p-3",
-                uiOutput(ns("range_summary"))
+        " and ",
+        tags$a(
+          "Australian Bureau of Meteorology",
+          href = "https://www.bom.gov.au/jsp/ncc/cdio/calendar/climate-calendar?stn_num=086338&month=10&day=14",
+          target = "_blank",
+          style = "color:#036B55;"
+        )
+      ),
+      
+      fluidRow(
+        column(
+          width = 4,
+          class = "d-flex justify-content-center",
+          div(
+            class = "card p-3",
+            airDatepickerInput(
+              inputId = ns("range"),
+              label = NULL,
+              value = NULL,
+              minDate = as.Date("2024-09-01"),
+              maxDate = as.Date("2025-10-31"),
+              range = TRUE,
+              inline = TRUE,
+              autoClose = TRUE,
+              width = "100%"
             )
           )
         ),
-        
-        br(),
-        
-        div(class = "card p-3",
-            tags$small(class = "text-muted d-block mb-2", "Drag options into each date box"),
-            fluidRow(
-              column(6, h5("Outdoor activities"), uiOutput(ns("outdoor_list"))),
-              column(6, h5("Indoor activities"),  uiOutput(ns("indoor_list")))
-            )
-        ),
-        
-        div(class = "card p-3",
-            h4("Activity Planner"),
-            uiOutput(ns("itinerary_boards"))
-        ),
-        
-        # CSS Styles
-        tags$style(HTML("
-          .card { 
-            border: 1px solid #e5e7eb; 
-            border-radius: 14px; 
-            box-shadow: none; 
+        column(width = 8, div(class = "card p-3", uiOutput(
+          ns("range_summary")
+        )))
+      ),
+      
+      br(),
+      
+      div(
+        class = "card p-3",
+        tags$small(class = "text-muted d-block mb-2", "Drag options into each date box"),
+        fluidRow(column(
+          6, h5("Outdoor activities"), uiOutput(ns("outdoor_list"))
+        ), column(
+          6, h5("Indoor activities"), uiOutput(ns("indoor_list"))
+        ))
+      ),
+      
+      div(class = "card p-3", h4("Activity Planner"), uiOutput(ns(
+        "itinerary_boards"
+      ))),
+      
+      # CSS Styles
+      tags$style(
+        HTML(
+          "
+          .card {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            box-shadow: none;
           }
-          
+
           .cal-card {
             display: inline-block;
             padding: 12px 14px;
           }
-          
-          .cal-card .air-datepicker { 
-            margin: 0 auto; 
+
+          .cal-card .air-datepicker {
+            margin: 0 auto;
           }
-          
-          .air-datepicker-global-container, 
-          .air-datepicker { 
-            font-size: 16px; 
+
+          .air-datepicker-global-container,
+          .air-datepicker {
+            font-size: 16px;
           }
-          
-          .air-datepicker--content { 
-            padding: 14px 16px; 
+
+          .air-datepicker--content {
+            padding: 14px 16px;
           }
-          
-          .air-datepicker-cell.-day- { 
-            height: 44px; 
-            position: relative; 
+
+          .air-datepicker-cell.-day- {
+            height: 44px;
+            position: relative;
           }
-          
-          .air-datepicker-cell.-disabled- { 
-            color: #9aa3ad !important; 
-            background: #f3f5f7 !important; 
-            cursor: not-allowed !important; 
-            opacity: .7; 
+
+          .air-datepicker-cell.-disabled- {
+            color: #9aa3ad !important;
+            background: #f3f5f7 !important;
+            cursor: not-allowed !important;
+            opacity: .7;
           }
-          
+
           .itinerary-row {
-            display: flex; 
-            gap: 16px; 
+            display: flex;
+            gap: 16px;
             flex-wrap: nowrap;
-            overflow-x: auto; 
+            overflow-x: auto;
             padding-bottom: 6px;
           }
-          
-          .board-col { 
-            flex: 1 0 14%; 
-            min-width: 220px; 
+
+          .board-col {
+            flex: 1 0 14%;
+            min-width: 220px;
           }
-          
-          .board-col h6 { 
-            margin: 0 0 .4rem 0; 
-            font-weight: 700; 
-            color: #111827; 
+
+          .board-col h6 {
+            margin: 0 0 .4rem 0;
+            font-weight: 700;
+            color: #111827;
           }
-          
+
           .rank-list.dropzone {
-            min-height: 92px; 
+            min-height: 92px;
             border: 1px dashed #d1d5db;
-            border-radius: 12px; 
+            border-radius: 12px;
             background: #fafafa;
           }
-          
+
           .rank-list.chips.pool {
-            min-height: 84px; 
+            min-height: 84px;
             border: 1px dashed #d1d5db;
-            border-radius: 12px; 
-            padding: 8px; 
+            border-radius: 12px;
+            padding: 8px;
             background: #fff;
           }
-          
+
           .rank-list.chips.board {
-            min-height: 92px; 
+            min-height: 92px;
             border: 1px dashed #d1d5db;
-            border-radius: 12px; 
-            padding: 8px; 
+            border-radius: 12px;
+            padding: 8px;
             background: #fafafa;
           }
-          
+
           .rank-list .rank-list-item {
-            padding: 6px 10px; 
+            padding: 6px 10px;
             border-radius: 9999px;
-            border: 1px solid #e5e7eb; 
-            background: #fff; 
+            border: 1px solid #e5e7eb;
+            background: #fff;
             font-weight: 600;
           }
-          
+
           .metrics-row {
-            display: flex; 
-            gap: 8px; 
+            display: flex;
+            gap: 8px;
             flex-wrap: wrap;
             margin: .25rem 0 .5rem 0;
           }
-          
+
           .chip {
-            display: inline-flex; 
-            align-items: center; 
+            display: inline-flex;
+            align-items: center;
             gap: 6px;
-            padding: 6px 10px; 
+            padding: 6px 10px;
             border: 1px solid #e5e7eb;
-            border-radius: 9999px; 
+            border-radius: 9999px;
             background: #fff;
           }
-          
-          .chip .ico { 
-            font-size: 1.05rem; 
-            line-height: 1; 
+
+          .chip .ico {
+            font-size: 1.05rem;
+            line-height: 1;
           }
-          
-          .chip .val { 
-            font-weight: 700; 
-            font-size: .95rem; 
-            color: #111827; 
+
+          .chip .val {
+            font-weight: 700;
+            font-size: .95rem;
+            color: #111827;
           }
-          
-          .chip .sub { 
-            font-size: .75rem; 
-            color: #6b7280; 
+
+          .chip .sub {
+            font-size: .75rem;
+            color: #6b7280;
           }
-          
-          .chip.muted { 
-            background: #f8fafc; 
-            border-color: #e5e7eb; 
+
+          .chip.muted {
+            background: #f8fafc;
+            border-color: #e5e7eb;
           }
-          
+
           .table-clean.table-sm>tbody>tr>td,
           .table-clean>thead>tr>th {
             padding: .25rem .6rem;
             vertical-align: middle;
           }
-          
+
           .table-clean {
             border-collapse: separate;
             border-spacing: 0;
           }
-          
-          .text-right { 
-            text-align: right; 
+
+          .text-right {
+            text-align: right;
           }
-          
+
           .table-clean th,
-          .table-clean td { 
-            vertical-align: middle; 
+          .table-clean td {
+            vertical-align: middle;
           }
-          
-          .col-num { 
-            text-align: right; 
-            white-space: nowrap; 
+
+          .col-num {
+            text-align: right;
+            white-space: nowrap;
           }
-          
-          .col-left { 
-            text-align: left;  
+
+          .col-left {
+            text-align: left;
           }
-          
-          .wx-cell { 
-            display: flex; 
-            align-items: center; 
-            gap: .4rem; 
+
+          .wx-cell {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
           }
-          
-          .wx-ico  { 
-            font-size: 1.05rem; 
-            line-height: 1; 
-          }
-          
-          .temp-cell .mean { 
-            font-weight: 800; 
-          }
-          
-          .temp-cell .min  { 
-            color: #2563eb; 
-            font-weight: 600; 
-          }
-          
-          .temp-cell .max  { 
-            color: #ef4444; 
-            font-weight: 600; 
-          }
-          
-          .pm-badge { 
-            display: inline-flex; 
-            align-items: center; 
-            gap: .35rem; 
-          }
-          
-          .rank-list.chips.pool .rank-list-item {
-            display: inline-block;
-            margin: 6px 8px 0 0; 
-            padding: 8px 12px;
-            background: #eaf7f0;
-            color: #0f5132; 
-            border: 1px solid #b7e4c7;
-            border-radius: 999px; 
-            font-weight: 600;
-            box-shadow: 0 2px 6px rgba(16,185,129,.10);
-            cursor: grab; 
-            user-select: none;
-          }
-          
-          .rank-list.chips.board .rank-list-item {
-            display: inline-block;
-            margin: 6px 8px 0 0; 
-            padding: 8px 12px;
-            background: #f1edff;
-            color: #3b3070; 
-            border: 1px solid #d6ccff;
-            border-radius: 999px; 
-            font-weight: 600;
-            box-shadow: 0 2px 6px rgba(99,102,241,.12);
-            cursor: grabbing; 
-            user-select: none;
-          }
-          
-          .chip.stack {
-            display: inline-flex; 
-            flex-direction: column; 
-            align-items: flex-start;
-            gap: 2px; 
-            padding: 6px 10px; 
-            border: 1px solid #e5e7eb;
-            border-radius: 9999px; 
-            background: #fff;
-          }
-          
-          .chip.stack .row1 {
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
+
+          .wx-ico  {
+            font-size: 1.05rem;
             line-height: 1;
           }
-          
+
+          .temp-cell .mean {
+            font-weight: 800;
+          }
+
+          .temp-cell .min  {
+            color: #2563eb;
+            font-weight: 600;
+          }
+
+          .temp-cell .max  {
+            color: #ef4444;
+            font-weight: 600;
+          }
+
+          .pm-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+          }
+
+          .rank-list.chips.pool .rank-list-item {
+            display: inline-block;
+            margin: 6px 8px 0 0;
+            padding: 8px 12px;
+            background: #eaf7f0;
+            color: #0f5132;
+            border: 1px solid #b7e4c7;
+            border-radius: 999px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(16,185,129,.10);
+            cursor: grab;
+            user-select: none;
+          }
+
+          .rank-list.chips.board .rank-list-item {
+            display: inline-block;
+            margin: 6px 8px 0 0;
+            padding: 8px 12px;
+            background: #f1edff;
+            color: #3b3070;
+            border: 1px solid #d6ccff;
+            border-radius: 999px;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(99,102,241,.12);
+            cursor: grabbing;
+            user-select: none;
+          }
+
+          .chip.stack {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            padding: 6px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 9999px;
+            background: #fff;
+          }
+
+          .chip.stack .row1 {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1;
+          }
+
           .chip .cap {
-            display: block; 
-            font-size: .70rem; 
+            display: block;
+            font-size: .70rem;
             color: #94a3b8;
-            text-transform: uppercase; 
-            letter-spacing: .04em; 
+            text-transform: uppercase;
+            letter-spacing: .04em;
             font-weight: 700;
           }
-          
-          .summary-list { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 10px; 
+
+          .summary-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
           }
-          
+
           .row-card {
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
+            display: flex;
+            align-items: center;
+            gap: 12px;
             padding: 10px 12px;
-            background: #fff; 
-            border: 1px solid #e5e7eb; 
+            background: #fff;
+            border: 1px solid #e5e7eb;
             border-radius: 14px;
           }
-          
-          .row-card .date { 
-            width: 140px; 
-            font-weight: 700; 
+
+          .row-card .date {
+            width: 140px;
+            font-weight: 700;
           }
-          
-          .row-card .wx { 
-            display: flex; 
-            align-items: center; 
-            gap: 6px; 
-            width: 110px; 
-            color: #334155; 
+
+          .row-card .wx {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 110px;
+            color: #334155;
           }
-          
-          .row-card .chips { 
-            display: flex; 
-            flex-wrap: wrap; 
-            gap: 8px; 
+
+          .row-card .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
           }
-          
-          .summary-list .row-card { 
-            padding: 14px 16px; 
+
+          .summary-list .row-card {
+            padding: 14px 16px;
           }
-          
-          .summary-list .date { 
-            font-size: 1.7rem; 
+
+          .summary-list .date {
+            font-size: 1.7rem;
           }
-          
-          .summary-list .wx { 
-            font-size: 1.7rem; 
+
+          .summary-list .wx {
+            font-size: 1.7rem;
           }
-          
-          .summary-list .wx span:first-child { 
-            font-size: 1.7rem; 
-            line-height: 1; 
+
+          .summary-list .wx span:first-child {
+            font-size: 1.7rem;
+            line-height: 1;
           }
-          
-          .summary-metrics .chip { 
-            padding: 8px 12px; 
+
+          .summary-metrics .chip {
+            padding: 8px 12px;
           }
-          
-          .summary-metrics .chip .ico  { 
-            font-size: 1.4rem; 
+
+          .summary-metrics .chip .ico  {
+            font-size: 1.4rem;
           }
-          
-          .summary-metrics .chip .val  { 
-            font-size: 1.4rem; 
-            font-weight: 700; 
+
+          .summary-metrics .chip .val  {
+            font-size: 1.4rem;
+            font-weight: 700;
           }
-          
-          .summary-metrics .chip .unit { 
-            font-size: 1.0rem; 
+
+          .summary-metrics .chip .unit {
+            font-size: 1.0rem;
           }
-          
-          .summary-metrics .chip .cap  { 
-            font-size: 1.0rem; 
+
+          .summary-metrics .chip .cap  {
+            font-size: 1.0rem;
           }
-          
-          .rank-list.chips.board .rank-list-item { 
-            cursor: pointer; 
+
+          .rank-list.chips.board .rank-list-item {
+            cursor: pointer;
           }
-          
-          .rank-list .rank-list-item { 
-            position: relative; 
+
+          .rank-list .rank-list-item {
+            position: relative;
           }
-          
+
           .rank-list .chip-remove {
-            position: absolute; 
-            top: -6px; 
+            position: absolute;
+            top: -6px;
             right: -6px;
-            width: 18px; 
-            height: 18px; 
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            border: 1px solid #e5e7eb; 
+            border: 1px solid #e5e7eb;
             background: #fff;
-            font-size: 12px; 
-            line-height: 16px; 
+            font-size: 12px;
+            line-height: 16px;
             text-align: center;
-            cursor: pointer; 
+            cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,.08);
           }
-          
-          .rank-list .chip-remove::after { 
-            content: '×'; 
+
+          .rank-list .chip-remove::after {
+            content: '×';
           }
-        ")),
-        
-        # JavaScript
-        tags$script(HTML("
+        "
+        )
+      ),
+      
+      # JavaScript
+      tags$script(
+        HTML(
+          "
           (function(){
             function decorate(map){
               if(!map) return;
@@ -419,9 +435,13 @@ trip_tab_ui <- function(id) {
             const obs = new MutationObserver(function(){ decorate(window.__wdMap); });
             obs.observe(document.body, {subtree:true, childList:true});
           })();
-        ")),
-        
-        tags$script(HTML("
+        "
+        )
+      ),
+      
+      tags$script(
+        HTML(
+          "
           (function(){
             function esc(id){ return '#'+id.replace(/([:\\.\\[\\],])/g, '\\\\$1'); }
             function getInstanceFromNode(node){
@@ -478,9 +498,13 @@ trip_tab_ui <- function(id) {
               setTimeout(function(){ setViewById(p.id, p.year, p.month) || setViewById(p.id + '-air', p.year, p.month); }, 150);
             });
           })();
-        ")),
-        
-        tags$script(HTML("
+        "
+        )
+      ),
+      
+      tags$script(
+        HTML(
+          "
           (function(){
             function valuesOf($list){
               return $list.find('.rank-list-item')
@@ -498,7 +522,7 @@ trip_tab_ui <- function(id) {
               var shinyId = domId.replace(/^rank-list-/, '');
               window._pushTimers = window._pushTimers || {};
               if (window._pushTimers[shinyId]) clearTimeout(window._pushTimers[shinyId]);
-              window._pushTimers[shinyId] = setTimeout(function(){ 
+              window._pushTimers[shinyId] = setTimeout(function(){
                 var vals = valuesOf($list);
                 var hasOut = hasOutdoor(vals);
                 Shiny.setInputValue(shinyId, vals.length > 0 ? vals : null, {priority:'event'});
@@ -531,22 +555,21 @@ trip_tab_ui <- function(id) {
                 if (m.type === 'childList') {
                   var list = m.target.closest('.rank-list.chips.board');
                   if (list && list.id) {
-                      setTimeout(function(){ pushState($(list)); }, 0); 
+                      setTimeout(function(){ pushState($(list)); }, 0);
                   }
                 }
               });
             });
             obs.observe(document.body, {subtree:true, childList:true});
           })();
-        "))
+        "
+        )
+      )
     )
   )
 }
 
 # Weather tab UI
 weather_tab_ui <- function() {
-  page_fillable(
-    theme = bs_theme(version = 5, primary = "#1f334a"),
-    trip_tab_ui("trip")
-  )
+  page_fillable(theme = bs_theme(version = 5, primary = "#1f334a"), trip_tab_ui("trip"))
 }
