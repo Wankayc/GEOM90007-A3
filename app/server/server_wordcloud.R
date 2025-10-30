@@ -84,7 +84,6 @@ observeEvent(input$themeSingle, {
   }
   
   # --------- Personality tracking ----------
-  # This covers both direct radio button clicks AND wordcloud clicks that update radios
   category_mapping <- list(
     "Accommodation" = "accommodation",
     "Transport" = "transport", 
