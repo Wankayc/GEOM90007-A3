@@ -1,15 +1,11 @@
-# GEOM90007 Assignment 3
+# GEOM90007 Assignment 3 - Melbourne Explorer
 
 ## Installation & Running
 
 **Clone the repository**
-git clone https://github.com/Wankayc/GEOM90007-A3.git
+- git clone https://github.com/Wankayc/GEOM90007-A3.git
 
-**Install Git LFS (if not already installed)**
-git lfs install
-
-**Download the large data files**
-git lfs pull
+- Extract the entire zip folder to your desired location
 
 ---
 
@@ -25,44 +21,38 @@ Method 2: From R Script
 setwd("path/to/your/project")
 shiny::runApp("app")
 ```
-The app will automatically:
 
-- Install any missing required packages
+Install these packages before running the application:
 
-- Load transport data from GeoJSON files
+   ```
+   install.packages(c(
+     "shiny", "shinythemes", "shinyjs", "leaflet", "shinyWidgets",
+     "shinydashboard", "dplyr", "ggplot2", "sf", "here", "bslib", 
+     "sortable", "lubridate", "tidyr", "readr", "stringr", "later",
+     "googleway", "ggiraph", "tibble", "purrr"
+   ))
 
-- Process data within specified radii of Melbourne CBD
+```
 
 ---
 
 ## Project Structure
 
-- Core App Files (in app/ folder)
-
-- ui.R - User interface and layout
-
-- server.R - App logic and functionality
-
-- global.R - Data loading and preprocessing
-
-- www/style.css - Custom styling
-
-- Support Files (in R/ folder)
-
-- setup.R - Package installation and loading
-
-- data_import.R - Data loading functions
-
-- data_processing.R - Data transformation functions
-
-- functions.R - Reusable utility functions
-
-- Data Files (in data/ folder)
-
+   After extraction, your folder should contain:
+```   
+root/
+|- app/ : Main Shiny application files
+|- data/ : All application datasets
+|- README.txt : This file
+```
 ---
 
-## Data
+## Datasets
 
-raw/Public Transport Lines.geojson - [Route data](https://opendata.transport.vic.gov.au/dataset/6d36dfd9-8693-4552-8a03-05eb29a391fd/resource/52e5173e-b5d5-4b65-9b98-89f225fc529c/download/public_transport_lines.geojson)
+Cafe, Restaurant, Bistro seats (2023): https://data.melbourne.vic.gov.au/explore/dataset/cafes-and-restaurants-with-seating-capacity/information
 
-raw/Public Transport Stops.geojson - [Stop location data](https://opendata.transport.vic.gov.au/dataset/6d36dfd9-8693-4552-8a03-05eb29a391fd/resource/afa7b823-0c8b-47a1-bc40-ada565f684c7/download/public_transport_stops.geojson)
+Landmarks and places of interest, including schools, theatres, health services, sports facilities, places of worship, galleries and museums (2023): https://data.melbourne.vic.gov.au/explore/dataset/landmarks-and-places-of-interest-including-schools-theatres-health-services-spor
+
+Public barbecues (2023): https://data.melbourne.vic.gov.au/explore/dataset/public-barbecues/information/
+
+Weather and air data retrieveed from: https://data.gov.au/data/dataset/microclimate-sensors-data and https://www.bom.gov.au/jsp/ncc/cdio/calendar/climate-calendar?stn_num=086338&month=10&day=14
