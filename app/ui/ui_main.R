@@ -14,7 +14,7 @@ ui <- tagList(
     )
   ),
   
-  # Main app content - hidden initially
+  # Main app content
   div(
     id = "app-content",
     style = "display: none;",  # Hidden until data loads

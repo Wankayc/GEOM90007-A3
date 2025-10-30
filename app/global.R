@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 # global.R - Central communication hub for the entire app
+=======
+# global.R - main communication hub for all servers
+>>>>>>> Stashed changes
 
 # Load required libraries
 library(shiny)
@@ -20,24 +24,37 @@ library(stringr)
 library(later)
 library(googleway)
 library(ggiraph)
+library(tibble)
+library(purrr)
+
 
 source(here("app", "tableau-in-shiny-v1.2.R"))
 
+<<<<<<< Updated upstream
 # read and clean data in wordcloud
+=======
+# Read and clean data for wordcloud
+>>>>>>> Stashed changes
 landmarks <- read.csv(here('data', 'landmarks.csv'), stringsAsFactors = FALSE)
 cafe_restaurant <- read.csv(here('data', 'cafe_and_restaurant_2023.csv'), stringsAsFactors = FALSE)
 barbecues <- read.csv(here('data', 'barbecues.csv'), stringsAsFactors = FALSE)
 
 clean_data <- function(df) {
   df %>%
+<<<<<<< Updated upstream
     rename_with(~gsub('\\s+', '_', .), everything()) %>%
     rename_with(~gsub('\\.', '_', .), everything())
+=======
+    rename_with(~gsub('\\.', '_', .), everything()) %>% 
+    rename_with(~gsub('\\s+', '_', .), everything())
+>>>>>>> Stashed changes
 }
 
 landmarks <- clean_data(landmarks)
 cafe_restaurant <- clean_data(cafe_restaurant)
 barbecues <- clean_data(barbecues)
 
+<<<<<<< Updated upstream
 # merge data together
 theme_data <- bind_rows(
   landmarks %>%
@@ -57,14 +74,68 @@ theme_data <- bind_rows(
 
 
 
+=======
+# Merge data together (be tolerant of missing columns in individual CSVs)
+canonical_cols <- c(
+  "Name", "Latitude", "Longitude", "Theme", "Sub_Theme",
+  "Google_Maps_Rating", "Business_address", "opening_time", "closing_time"
+)
+
+normalize_columns <- function(df, source_name = "unknown") {
+  
+  # First select existing columns safely
+  df_sel <- dplyr::select(df, any_of(canonical_cols))
+  
+  # Add missing columns as NA to satisfy bind_rows
+  missing_cols <- setdiff(canonical_cols, names(df_sel))
+  if (length(missing_cols) > 0) {
+    for (col in missing_cols) {
+      df_sel[[col]] <- NA_character_
+    }
+  }
+  
+  # Ensure expected types
+  if ("Google_Maps_Rating" %in% names(df_sel)) {
+    df_sel$Google_Maps_Rating <- as.character(df_sel$Google_Maps_Rating)
+  } else {
+    df_sel$Google_Maps_Rating <- NA_character_
+  }
+  if (!("Business_address" %in% names(df_sel))) {
+    df_sel$Business_address <- NA_character_
+  }
+  
+  # Ensure opening_time and closing_time are character type
+  if ("opening_time" %in% names(df_sel)) {
+    df_sel$opening_time <- as.character(df_sel$opening_time)
+  }
+  if ("closing_time" %in% names(df_sel)) {
+    df_sel$closing_time <- as.character(df_sel$closing_time)
+  }
+  df_sel
+}
+
+# Normalize data
+landmarks_norm <- normalize_columns(landmarks, "landmarks")
+cafe_norm <- normalize_columns(cafe_restaurant, "cafe_restaurant")
+barbecues_norm <- normalize_columns(barbecues, "barbecues")
+
+theme_data <- bind_rows(
+  landmarks_norm,
+  cafe_norm,
+  barbecues_norm
+)
+
+theme_data <- theme_data %>%
+  mutate(Google_Rating = suppressWarnings(as.numeric(Google_Maps_Rating)))
+
+>>>>>>> Stashed changes
 # Google Maps API Key
 GOOGLE_MAPS_API_KEY <- Sys.getenv("GOOGLE_MAPS_API_KEY")
 if (GOOGLE_MAPS_API_KEY == "") {
   GOOGLE_MAPS_API_KEY <- "AIzaSyCJ6vbSvUKeJS22fXE8qtr43P219eceeio"
-  warning("建議在 ~/.Renviron 設定 GOOGLE_MAPS_API_KEY")
 }
 
-# 路線顏色配置
+# Route color configuration
 MODE_COLORS <- c(
   driving = "#2ca02c",
   transit = "#1f77b4", 
@@ -75,7 +146,7 @@ MODE_COLORS <- c(
 # Melbourne CBD coordinates
 MELBOURNE_CBD <- st_sfc(st_point(c(144.9631, -37.8136)), crs = 4326)
 
-# 預設地點資料（墨爾本知名地點）
+# Default location data (Melbourne famous places)
 DEFAULT_PLACES <- data.frame(
   name = c(
     # Cafes
@@ -126,7 +197,7 @@ DEFAULT_PLACES <- data.frame(
     rep("🍽️", 5),
     rep("🌳", 5)
   ),
-  # 營業時間（24小時制）
+  # Operating hours (24-hour format)
   open_time = c(
     rep(7, 6),   # Cafes open at 7am
     rep(12, 5),  # Restaurants open at 12pm

@@ -1,3 +1,4 @@
+# Main server for app
 server <- function(input, output, session) {
   
   # Rule-based approach for determining Personality based on categories
@@ -17,7 +18,17 @@ server <- function(input, output, session) {
     current_personality = "Melbourne Explorer"
   )
   
+<<<<<<< Updated upstream
   # Show app content when data is loaded
+=======
+  # ---- Server logic ----------------------------------------------------------
+  
+  source("server/server_weather.R", local = TRUE)
+  session$userData$calendar_feed <- calendar_feed
+  weather_selected_dates <- reactiveVal(NULL)
+  
+  # Only show dashboard when data is fully loaded
+>>>>>>> Stashed changes
   observe({
     # Wait for your main datasets to load
     req(theme_data)  # Your main dataset

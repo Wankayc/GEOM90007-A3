@@ -29,7 +29,6 @@ observeEvent(input$themeSingle, {
   req(input$themeSingle)
   
   # --------- Personality tracking ----------
-  # This covers both direct radio button clicks AND wordcloud clicks that update radios
   category_mapping <- list(
     "Accommodation" = "accommodation",
     "Transport" = "transport", 
@@ -113,6 +112,57 @@ observeEvent(input$subCloudViz_mark_selection_changed, {
   if (!is.null(selected_sub) && nchar(selected_sub) > 0) current_sub_theme(selected_sub) else current_sub_theme(NULL)
 })
 
+<<<<<<< Updated upstream
+=======
+
+# Handle "View on Map" button click
+observeEvent(input$showMapBtn, {
+  # Get the currently selected sub_theme
+  sub_theme <- current_sub_theme()
+  
+  # If no sub_theme is selected, show a warning notification
+  if (is.null(sub_theme)) {
+    showNotification(
+      HTML("<b>No selection detected</b><br>Please select an attraction type first by clicking on the word cloud above."),
+      type = "warning",
+      duration = 4
+    )
+    return()
+  }
+  
+  # Ensure top_places_for_map has data before switching to map
+  # (In case the ranking hasn't been rendered yet)
+  current_top_places <- top_places_for_map()
+  if (is.null(current_top_places) || nrow(current_top_places) == 0) {
+    # Generate the Top N data if not available
+    top_n_data <- theme_data %>%
+      filter(Sub_Theme == sub_theme) %>%
+      arrange(desc(Google_Rating)) %>%
+      head(as.numeric(input$topN))
+    
+    if (nrow(top_n_data) > 0) {
+      top_places_for_map(top_n_data)
+    }
+  }
+  
+  updateNavbarPage(session, 'nav', selected = 'Map')
+  
+  shinyjs::delay(800, {
+    # Update the sub_theme for map
+    selected_sub_theme_for_map(sub_theme)
+    
+    # Increment trigger to force map refresh (even if sub_theme is the same)
+    map_refresh_trigger(map_refresh_trigger() + 1)
+    
+    showNotification(
+      paste0("Loading Top ", input$topN, " locations for: ", sub_theme),
+      type = "message",
+      duration = 2
+    )
+  })
+})
+
+>>>>>>> Stashed changes
 # The top 5-20 ranking
 output$plot_ranking <- renderGirafe({
   sub_theme <- current_sub_theme()
@@ -159,6 +209,18 @@ output$plot_ranking <- renderGirafe({
     arrange(Google_Rating_Display) %>%
     mutate(Name_display = factor(Name_display, levels = Name_display))
   
+<<<<<<< Updated upstream
+=======
+  # Save the original data columns to top_places_for_map for map display
+  if (nrow(ranking_data) > 0) {
+    # Extract only the original theme_data columns (before all the display processing)
+    top_places_for_map(ranking_data %>% 
+                         select(any_of(names(theme_data))))
+  } else {
+    top_places_for_map(NULL)
+  }
+  
+>>>>>>> Stashed changes
   if (nrow(ranking_data) == 0) {
     p <- ggplot() +
       annotate('text', x=0.5, y=0.5,
