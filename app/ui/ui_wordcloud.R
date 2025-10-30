@@ -153,6 +153,7 @@ themes_available <- sort(unique(theme_data$Theme[!is.na(theme_data$Theme)]))
 # Main Word Cloud page
 main_cloud_tab <- tabPanel(
   title = 'Explore by Category',
+  icon = icon("cloud"),
   collapsible_css,
   collapsible_js,
   heading_spacing_css,
@@ -193,95 +194,98 @@ main_cloud_tab <- tabPanel(
 )
 
 # Sub Word Cloud + Ranking page
-sub_cloud_tab <- tabPanel(title = 'Popular Attractions',
-                          div(
-                            class = 'page-wrap',
-                            map_button_css,
-                            fluidRow(
-                              column(
-                                width = 9,
-                                uiOutput("dynamic_subcloud_title"),
-                                uiOutput("dynamic_subcloud_desc"),
-                                div(
-                                  class = 'wordcloud-container-wrapper',
-                                  div(
-                                    class = 'full-bleed',
-                                    tableauPublicViz(id = 'subCloudViz', url = 'https://public.tableau.com/views/Sub_Theme_Cloud/TopHighlightsinThisTheme?:toolbar=no&:showVizHome=no', height =
-                                                       "60vh")
-                                  ),
-                                  # Info button - bottom left corner
-                                  tags$button(
-                                    id = 'dataSourceToggleSub',
-                                    class = 'data-source-toggle',
-                                    title = 'About this data',
-                                    tags$i(class = 'fa fa-info', style = 'font-style: normal;')
-                                  ),
-                                  # Collapsible content
-                                  div(
-                                    id = 'dataSourceContentSub',
-                                    class = 'data-source-content',
-                                    tags$p(
-                                      'Data source: ',
-                                      tags$a(
-                                        'Melbourne Open Data Portal',
-                                        href = 'https://data.melbourne.vic.gov.au/',
-                                        target = '_blank'
-                                      )
-                                    )
-                                  )
-                                )
-                              ),
-                              column(width = 3, div(
-                                class = 'card',
-                                h4('Theme'),
-                                div(
-                                  class = "radio-scroll",
-                                  radioButtons(
-                                    'themeSingle',
-                                    NULL,
-                                    choices = themes_available,
-                                    selected = ifelse("Leisure" %in% themes_available, "Leisure", themes_available[1]),
-                                    inline = FALSE
-                                  )
-                                ),
-                                span(class = 'help-note', 'Choose one theme to update the word cloud and the rankings.')
-                              ))
-                            ),
-                            hr(style = 'border:0; border-top:3px solid #036B55; margin:20px 0 15px 0;'),
-                            fluidRow(column(
-                              width = 9,
-                              div(
-                                style = 'margin-bottom: 15px;',
-                                uiOutput("dynamic_ranking_title"),
-                                actionButton(
-                                  'showMapBtn',
-                                  'View on Map',
-                                  icon = icon('map-marker-alt'),
-                                  style = 'background: linear-gradient(to bottom, #048d6f 0%, #036B55 50%, #025246 100%); color:white; padding:10px 24px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; vertical-align:middle; margin-left:10px; box-shadow: 0 4px 12px rgba(3, 107, 85, 0.35), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease; position: relative; overflow: hidden;'
-                                )
-                              ),
-                              girafeOutput('plot_ranking', height = '95vh')
-                            ), column(
-                              width = 3, div(
-                                class = 'card',
-                                h4('Show top'),
-                                selectInput(
-                                  'topN',
-                                  NULL,
-                                  choices = c(
-                                    '5' = 5,
-                                    '10' = 10,
-                                    '15' = 15,
-                                    '20' = 20
-                                  ),
-                                  selected = 10,
-                                  width = '100%'
-                                ),
-                                hr(style = 'border-color:#036B55; margin:15px 0;'),
-                                p('Number of top-rated places to display', style = 'color:#666; font-size:11px; line-height:1.3;')
-                              )
-                            ))
-                          ))
+sub_cloud_tab <- tabPanel(
+  title = 'Popular Attractions',
+  icon = icon("fire"),
+  div(
+    class = 'page-wrap',
+    map_button_css,
+    fluidRow(
+      column(
+        width = 9,
+        uiOutput("dynamic_subcloud_title"),
+        uiOutput("dynamic_subcloud_desc"),
+        div(
+          class = 'wordcloud-container-wrapper',
+          div(
+            class = 'full-bleed',
+            tableauPublicViz(id = 'subCloudViz', url = 'https://public.tableau.com/views/Sub_Theme_Cloud/TopHighlightsinThisTheme?:toolbar=no&:showVizHome=no', height =
+                               "60vh")
+          ),
+          # Info button - bottom left corner
+          tags$button(
+            id = 'dataSourceToggleSub',
+            class = 'data-source-toggle',
+            title = 'About this data',
+            tags$i(class = 'fa fa-info', style = 'font-style: normal;')
+          ),
+          # Collapsible content
+          div(
+            id = 'dataSourceContentSub',
+            class = 'data-source-content',
+            tags$p(
+              'Data source: ',
+              tags$a(
+                'Melbourne Open Data Portal',
+                href = 'https://data.melbourne.vic.gov.au/',
+                target = '_blank'
+              )
+            )
+          )
+        )
+      ),
+      column(width = 3, div(
+        class = 'card',
+        h4('Theme'),
+        div(
+          class = "radio-scroll",
+          radioButtons(
+            'themeSingle',
+            NULL,
+            choices = themes_available,
+            selected = ifelse("Leisure" %in% themes_available, "Leisure", themes_available[1]),
+            inline = FALSE
+          )
+        ),
+        span(class = 'help-note', 'Choose one theme to update the word cloud and the rankings.')
+      ))
+    ),
+    hr(style = 'border:0; border-top:3px solid #036B55; margin:20px 0 15px 0;'),
+    fluidRow(column(
+      width = 9,
+      div(
+        style = 'margin-bottom: 15px;',
+        uiOutput("dynamic_ranking_title"),
+        actionButton(
+          'showMapBtn',
+          'View on Map',
+          icon = icon('map-marker-alt'),
+          style = 'background: linear-gradient(to bottom, #048d6f 0%, #036B55 50%, #025246 100%); color:white; padding:10px 24px; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; vertical-align:middle; margin-left:10px; box-shadow: 0 4px 12px rgba(3, 107, 85, 0.35), inset 0 1px 0 rgba(255,255,255,0.2); transition: all 0.3s ease; position: relative; overflow: hidden;'
+        )
+      ),
+      girafeOutput('plot_ranking', height = '95vh')
+    ), column(
+      width = 3, div(
+        class = 'card',
+        h4('Show top'),
+        selectInput(
+          'topN',
+          NULL,
+          choices = c(
+            '5' = 5,
+            '10' = 10,
+            '15' = 15,
+            '20' = 20
+          ),
+          selected = 10,
+          width = '100%'
+        ),
+        hr(style = 'border-color:#036B55; margin:15px 0;'),
+        p('Number of top-rated places to display', style = 'color:#666; font-size:11px; line-height:1.3;')
+      )
+    ))
+  )
+)
 
 # Return both tabs as a list
 list(main_cloud_tab, sub_cloud_tab)
