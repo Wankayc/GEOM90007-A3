@@ -1,9 +1,9 @@
 div(
   id = "summary-tab-content",
   
-  tags$head(
-    tags$style(
-      HTML("
+  tags$head(tags$style(
+    HTML(
+      "
         #summary-tab-content {
           font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
           padding: 20px;
@@ -126,13 +126,13 @@ div(
         }
 
         #summary-tab-content .itinerary-table.simplified .weather-icon {
-          font-size: 2.2em; 
-          margin-bottom: 10px; 
+          font-size: 2.2em;
+          margin-bottom: 10px;
           color: #036B55;
         }
         #summary-tab-content .itinerary-table.simplified .day-date {
           font-weight: 700;
-          font-size: 1.2em; 
+          font-size: 1.2em;
           margin-bottom: 6px;
           color: #036B55;
         }
@@ -143,7 +143,7 @@ div(
         }
 
         #summary-tab-content .itinerary-table.simplified .top-activity {
-          padding: 18px 16px; 
+          padding: 18px 16px;
           background: #f0f7ff;
           border-radius: 10px;
           border-left: 4px solid #036B55;
@@ -156,7 +156,7 @@ div(
         }
         #summary-tab-content .itinerary-table.simplified .top-activity .event-title {
           font-weight: 700;
-          font-size: 1.15em; 
+          font-size: 1.15em;
           margin-bottom: 10px;
           color: #036B55;
           line-height: 1.3;
@@ -175,7 +175,7 @@ div(
         #summary-tab-content .itinerary-table.simplified .no-activities {
           padding: 40px 20px;
           text-align: center;
-          font-size: 1.1rem; 
+          font-size: 1.1rem;
           color: #999;
           font-style: italic;
         }
@@ -540,10 +540,11 @@ div(
         #summary-tab-content .select-dates-card .instruction-list li:last-child {
           margin-bottom: 0;
         }
-      ")
-    ),
-    tags$script(
-      HTML("
+      "
+    )
+  ), tags$script(
+    HTML(
+      "
         $(document).on('click', '.itinerary-day-header, .itinerary-day-cell', function() {
           var dayIndex = $(this).data('day');
           Shiny.setInputValue('day_clicked', dayIndex);
@@ -552,16 +553,16 @@ div(
         $(document).on('click', '.carousel-item', function() {
           var placeName = $(this).data('place-name');
           var isPrimary = $(this).data('is-primary');
-          
+
           Shiny.setInputValue('carousel_place_clicked', {
             name: placeName,
             is_primary: isPrimary,
             timestamp: new Date().getTime()
           });
         });
-      ")
+      "
     )
-  ),
+  )),
   
   # Title Section with Personality Card
   div(
@@ -574,18 +575,15 @@ div(
         class = "subtitle"
       )
     ),
-    div(
-      class = "title-personality", 
+    div(class = "title-personality", div(
+      class = "personality-card",
       div(
-        class = "personality-card",
-        div(
-          class = "personality-content",
-          h3(textOutput("personality_title")),
-          p(textOutput("personality_description"), class = "personality-description")
-        ),
-        div(uiOutput("personality_icon", class = "personality-icon"))
-      )
-    )
+        class = "personality-content",
+        h3(textOutput("personality_title")),
+        p(textOutput("personality_description"), class = "personality-description")
+      ),
+      div(uiOutput("personality_icon", class = "personality-icon"))
+    ))
   ),
   
   # Itinerary and Carousel
@@ -601,31 +599,23 @@ div(
     ),
     
     # Carousel section
-    div(
-      class = "top-combined-section",
-      div(
-        class = "carousel-section", 
-        uiOutput("activity_carousel")
-      )
-    )
+    div(class = "top-combined-section", div(class = "carousel-section", uiOutput(
+      "activity_carousel"
+    )))
   ),
   
   # Instruction card when no dates selected
-  conditionalPanel(
-    condition = "!output.has_dates_selected", 
-    div(
-      class = "select-dates-card",
-      h4("📅 Plan Your Melbourne Adventure"),
-      p("To get started with your personalized itinerary:"),
-      div(
-        class = "instruction-list", 
-        tags$ul(
-          tags$li("Visit the Weather Summary tab to select your travel dates"),
-          tags$li("Choose activities that interest you in the Explore tab"),
-          tags$li("Your recommended itinerary will appear here automatically")
-        )
-      ),
-      p("Once you've selected dates, you'll see daily recommendations that you can click to explore related places!")
+  conditionalPanel(condition = "!output.has_dates_selected", div(
+    class = "select-dates-card",
+    h4("📅 Plan Your Melbourne Adventure"),
+    p("To get started with your personalized itinerary:"),
+    div(class = "instruction-list", tags$ul(
+      tags$li("Visit the Weather Summary tab to select your travel dates"),
+      tags$li("Choose activities that interest you in the Explore tab"),
+      tags$li("Your recommended itinerary will appear here automatically")
+    )),
+    p(
+      "Once you've selected dates, you'll see daily recommendations that you can click to explore related places!"
     )
-  )
+  ))
 )
