@@ -271,9 +271,9 @@ trip_tab_server <- function(id) {
         "🌬️"
       pm_ico   <- if (is.na(wx$pm25_mean))
         "🌫️"
-      else if (wx$pm25_mean <= 15)
+      else if (wx$pm25_mean <= 12.5)
         "🟢"
-      else if (wx$pm25_mean <= 35)
+      else if (wx$pm25_mean <= 25)
         "🟡"
       else
         "🔴"
@@ -414,7 +414,7 @@ trip_tab_server <- function(id) {
           any(acts_keys %in% c("hiking", "climbing", "barbecue", "picnic")))
         msgs <- c(msgs, "🥵 Very hot — stay hydrated and take breaks.")
       if (!is.na(pm25) &&
-          pm25 > 35 &&
+          pm25 > 25 &&
           is_outdoor)
         msgs <- c(msgs, "😷 Poor air quality — wear a mask.")
       
@@ -452,8 +452,8 @@ trip_tab_server <- function(id) {
           ),
           air = case_when(
             is.na(pm25_mean) ~ "moderate",
-            pm25_mean <= 15 ~ "good",
-            pm25_mean <= 35 ~ "moderate",
+            pm25_mean <= 12.5 ~ "good",
+            pm25_mean <= 25 ~ "moderate",
             TRUE ~ "poor"
           ),
           temp = round(coalesce(airtemperature_bom, (tmin + tmax) / 2), 1),
@@ -476,9 +476,9 @@ trip_tab_server <- function(id) {
       pm_icon <- function(v) {
         if (is.na(v))
           "⚪"
-        else if (v <= 15)
+        else if (v <= 12.5)
           "🟢"
-        else if (v <= 35)
+        else if (v <= 25)
           "🟡"
         else
           "🔴"
